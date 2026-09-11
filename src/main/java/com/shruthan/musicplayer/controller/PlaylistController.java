@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,12 +29,12 @@ public class PlaylistController {
 		return service.getAllPlaylists();
 	}
 	
-	@GetMapping("/playlist/{id}")
-	public Playlist getAllPlaylists(@PathVariable String id) {
-		return service.getPlaylistById(id);
+	@GetMapping("/playlist/{playlistId}")
+	public Playlist getPlaylistById(@PathVariable String playlistId) {
+		return service.getPlaylistById(playlistId);
 	}
 	
-	@GetMapping("/playlist")
+	@PostMapping("/playlist")
 	public Playlist createPlaylist(@RequestBody Playlist playlist) {
 		return service.createPlaylist(playlist);
 	}
@@ -44,17 +45,17 @@ public class PlaylistController {
 	}
 	
 	@DeleteMapping("/playlist/{id}")
-	public void deletePlaylistById(@PathVariable String id) {
-		service.deletePlaylistById(id);
+	public void deletePlaylistById(@PathVariable String playlistId) {
+		service.deletePlaylistById(playlistId);
 	}
 	
-	@PutMapping("/playlist/{id}/song/{id}")
+	@PostMapping("/playlist/{playlistId}/song/{songId}")
 	public void addSongToPlaylist(@PathVariable String playlistId, @PathVariable String songId) {
 		service.addSongToPlaylist(songId, playlistId);
 	}
 	
-	@PutMapping("/playlist/{id}/song/{id}")
-	public Playlist removeSongToPlaylist(@PathVariable String playlistId, @PathVariable String songId) {
-		return service.addSongToPlaylist(songId, playlistId);
+	@DeleteMapping("/playlist/{playlistId}/song/{songId}")
+	public Playlist removeSongFromPlaylist(@PathVariable String playlistId, @PathVariable String songId) {
+		return service.removeSongFromPlaylist(songId, playlistId);
 	}
 }
