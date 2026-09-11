@@ -5,63 +5,69 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.shruthan.musicplayer.model.Playlist;
+import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
+import com.shruthan.musicplayer.repository.SongRepository;
 
 @Service
 public class PlaylistService {
 	
-	final PlaylistRepository repository;
+	final PlaylistRepository playlistRepo;
+	final SongRepository songRepo;
 	
-	public PlaylistService(PlaylistRepository repository) {
-		this.repository = repository;
+	public PlaylistService(PlaylistRepository playlistRepo, SongRepository songRepo) {
+		this.playlistRepo = playlistRepo;
+		this.songRepo = songRepo;
 	}
 
 	public List<Playlist> getAllPlaylists() {
-		return repository.findAll();
+		return playlistRepo.findAll();
 	}
 	
 	public Playlist getPlaylistById(String id) {
-		return repository.findById(id).orElse(null);
+		return playlistRepo.findById(id).orElse(null);
 	}
 	
 	public Playlist createPlaylist(Playlist playlist) {
-		return repository.save(playlist);
+		return playlistRepo.save(playlist);
 	}
 	
 	public Playlist updatePlaylistById(Playlist playlist, String id) {
-		return repository.save(playlist);
+		return playlistRepo.save(playlist);
 	}
 	
 	public void deletePlaylistById(String playlistId) {
 		
-		Playlist playlist = repository.findById(playlistId).orElse(null);
+		Playlist playlist = playlistRepo.findById(playlistId).orElse(null);
 		
-		repository.delete(playlist);
+		playlistRepo.delete(playlist);
 	}
 	
 	public Playlist addSongToPlaylist(String songId, String playlistId) {
 		
-		Playlist playlist = repository.findById(playlistId).orElse(null);
+		Playlist playlist = playlistRepo.findById(playlistId).orElse(null);
+		Song song = songRepo.findById(songId).orElse(null);
 		
-		if (!songPresent(songId, playlistId)) {
-			playlist.getSongIds().add(songId);
+		if (playlist != null && song != null) {
+			
+			if (!playlist.getSongIds().contains(songId)) {
+				playlist.getSongIds().add(songId);				
+			}
+			return playlistRepo.save(playlist);
 		}
 		
-		return repository.save(playlist);	
+		return null;
 		
 	}
 	
-	private boolean songPresent(String songId, String playlistId) {
-		Playlist playlist = repository.findById(playlistId).orElse(null);
-
-		return playlist.getSongIds().contains(songId);
-	}
 	
 	public Playlist removeSongFromPlaylist(String songId, String playlistId) {
 		
-		Playlist playlist = repository.findById(playlistId).orElse(null);
+		Playlist playlist = playlistRepo.findById(playlistId).orElse(null);
 		
 		playlist.getSongIds().remove(songId);
+		
+		playlistRepo.save(playlist);
 		
 		return playlist;
 	}
