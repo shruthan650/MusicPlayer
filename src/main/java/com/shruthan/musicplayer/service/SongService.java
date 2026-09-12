@@ -1,8 +1,13 @@
 package com.shruthan.musicplayer.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.repository.SongRepository;
@@ -34,6 +39,24 @@ public class SongService {
 	
 	public void deleteSongById(String id) {
 		repository.deleteById(id);
+	}
+
+	public void uploadSong(MultipartFile songFile, String songId) throws IOException {
+
+		byte[] songFileBytes = songFile.getBytes();
+		
+		Path folder = Paths.get("songs");
+		String fileName = songFile.getOriginalFilename();
+		
+		Path filePath = folder.resolve(fileName);
+		
+		Files.createDirectories(folder);
+		Files.write(filePath, songFileBytes);
+		
+		Song song = repository.findById(songId).orElse(null);
+		song.setFilePath(filePath.toString());
+		
+		repository.save(song);
 	}
 	
 }
