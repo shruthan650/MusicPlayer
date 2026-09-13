@@ -1,14 +1,22 @@
 package com.shruthan.musicplayer.controller;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.http.HttpRange;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,5 +65,44 @@ public class SongController {
 //		return "File Details {Name : " + songFile.getName() + "\n Size : " + songFile.getSize() + "\n Type : " + songFile.getContentType() + "}";
 		
 		service.uploadSong(songFile, songId);
+	}
+	
+	@GetMapping("/song/{songId}/audio")
+	public ResponseEntity<byte[]> streamSong(@PathVariable String songId, 
+			@RequestHeader(value = "Range", required=false) String range) throws IOException {
+		
+		Resource resource = service.streamSong(songId);
+		
+		long contentLength = resource.contentLength();
+		
+		
+		if (range == null) {
+			return ResponseEntity
+					.ok()
+					.contentType(MediaType.parseMediaType("audio/wav"))
+					.contentLength(contentLength)
+					.body(resource.getInputStream().readAllBytes());
+					
+		}
+		
+		List<HttpRange> ranges = HttpRange.parseRanges(range);
+		
+		HttpRange httpRange = ranges.get(0);
+		
+		long start = httpRange.getRangeStart(contentLength);
+		long end = httpRange.getRangeEnd(contentLength);
+		long count = end - start + 1;
+		
+		byte[] allBytes = resource.getInputStream().readAllBytes();
+		
+		byte[] rangeBytes = Arrays.copyOfRange(allBytes, (int)start, (int)(end + 1));
+		
+		return ResponseEntity
+				.status(HttpStatus.PARTIAL_CONTENT)
+				.header("Accept-Ranges", "bytes")
+				.header("Content-Range", "bytes " + start + "-" + end + "/" + contentLength)
+				.contentLength(count)
+				.contentType(MediaType.parseMediaType("audio/wav"))
+				.body(rangeBytes);
 	}
 }

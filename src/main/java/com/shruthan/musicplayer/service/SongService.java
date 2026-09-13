@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -58,5 +60,16 @@ public class SongService {
 		
 		repository.save(song);
 	}
+
+	public Resource streamSong(String songId) throws IOException {
+		
+		Song song = repository.findById(songId).orElse(null);
+		
+		Path filePath = Paths.get(song.getFilePath());
+		
+		return new FileSystemResource(filePath);
+	}
+	
+	
 	
 }
