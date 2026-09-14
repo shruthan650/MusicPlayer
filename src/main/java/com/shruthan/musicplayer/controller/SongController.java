@@ -56,7 +56,7 @@ public class SongController {
 	}
 
 	@DeleteMapping("/song/{id}")
-	public void deleteSongById(@PathVariable String id) {
+	public void deleteSongById(@PathVariable String id) throws IOException {
 		service.deleteSongById(id);
 	}
 

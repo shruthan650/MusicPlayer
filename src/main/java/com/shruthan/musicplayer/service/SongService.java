@@ -39,8 +39,16 @@ public class SongService {
 		repository.save(song);
 	}
 	
-	public void deleteSongById(String id) {
-		repository.deleteById(id);
+	public void deleteSongById(String id) throws IOException {
+		Song song = repository.findById(id).orElse(null);
+		
+		if (song != null) {
+			if(song.getFilePath() != null) {
+				Files.deleteIfExists(Paths.get(song.getFilePath()));
+			}
+			
+			repository.deleteById(id);
+		}
 	}
 
 	public void uploadSong(MultipartFile songFile, String songId) throws IOException {
@@ -69,7 +77,5 @@ public class SongService {
 		
 		return new FileSystemResource(filePath);
 	}
-	
-	
 	
 }
