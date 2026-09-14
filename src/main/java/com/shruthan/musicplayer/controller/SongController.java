@@ -1,7 +1,6 @@
 package com.shruthan.musicplayer.controller;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.core.io.Resource;
@@ -68,7 +67,7 @@ public class SongController {
 	}
 	
 	@GetMapping("/song/{songId}/audio")
-	public ResponseEntity<byte[]> streamSong(@PathVariable String songId, 
+	public ResponseEntity<?> streamSong(@PathVariable String songId, 
 			@RequestHeader(value = "Range", required=false) String range) throws IOException {
 		
 		Resource resource = service.streamSong(songId);
@@ -81,7 +80,7 @@ public class SongController {
 					.ok()
 					.contentType(MediaType.parseMediaType("audio/wav"))
 					.contentLength(contentLength)
-					.body(resource.getInputStream().readAllBytes());
+					.body(resource);
 					
 		}
 		
@@ -93,16 +92,13 @@ public class SongController {
 		long end = httpRange.getRangeEnd(contentLength);
 		long count = end - start + 1;
 		
-		byte[] allBytes = resource.getInputStream().readAllBytes();
-		
-		byte[] rangeBytes = Arrays.copyOfRange(allBytes, (int)start, (int)(end + 1));
+		ResourceRegion region = new ResourceRegion(resource, start, count);
 		
 		return ResponseEntity
 				.status(HttpStatus.PARTIAL_CONTENT)
 				.header("Accept-Ranges", "bytes")
 				.header("Content-Range", "bytes " + start + "-" + end + "/" + contentLength)
 				.contentLength(count)
-				.contentType(MediaType.parseMediaType("audio/wav"))
-				.body(rangeBytes);
+				.body(region);
 	}
 }
