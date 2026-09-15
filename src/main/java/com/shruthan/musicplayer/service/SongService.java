@@ -54,6 +54,9 @@ public class SongService {
 
 	public void uploadSong(MultipartFile songFile, String songId) throws IOException {
 		
+		Song song = repository.findById(songId).orElse(null);
+		
+		String oldPath = song.getFilePath();
 		
 		if (songFile.isEmpty() ||
 			songFile.getOriginalFilename().isEmpty() ||
@@ -62,21 +65,11 @@ public class SongService {
 			return;
 		}
 		
-		Song song = repository.findById(songId).orElse(null);
-		
-		if (song != null) {
-			if (song.getFilePath() != null) {
-				Files.deleteIfExists(Paths.get(song.getFilePath()));
-			}
-		}
-		
 		byte[] songFileBytes = songFile.getBytes();
 		
 		Path folder = Paths.get("songs");
 		String originalfileName = songFile.getOriginalFilename();
-		
 		String extension = originalfileName.substring(originalfileName.lastIndexOf("."));
-		
 		String fileName = UUID.randomUUID().toString() + extension;
 		
 		Path filePath = folder.resolve(fileName);
@@ -87,6 +80,10 @@ public class SongService {
 		song.setFilePath(filePath.toString());
 		
 		repository.save(song);
+		
+		if (oldPath != null) {
+			Files.deleteIfExists(Paths.get(oldPath));
+		}
 	}
 
 	public Resource streamSong(String songId) throws IOException {
