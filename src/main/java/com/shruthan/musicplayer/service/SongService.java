@@ -12,49 +12,62 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
+import com.shruthan.musicplayer.repository.PlaylistRepository;
 import com.shruthan.musicplayer.repository.SongRepository;
 
 @Service
 public class SongService {
 	
-	final SongRepository repository;
+	final SongRepository songRepository;
+	final PlaylistRepository playlistRepository;
 
-	SongService(SongRepository repository) {
-		this.repository = repository;
+	SongService(SongRepository repository, PlaylistRepository playlistRepository) {
+		this.songRepository = repository;
+		this.playlistRepository = playlistRepository;
 	}
 
 	public List<Song> getAllSongs() {
-		return repository.findAll();
+		return songRepository.findAll();
 	}
 	
 	public Song addSong(Song song) {
-		return repository.save(song);
+		return songRepository.save(song);
 	}
 	
-	public Song getSongById(String id) {
-		return repository.findById(id).orElse(null);
+	public Song getSongById(String songId) {
+		return songRepository.findById(songId).orElse(null);
 	}
 	
-	public void updateSongById(Song song, String id) {
-		repository.save(song);
+	public void updateSongById(Song song, String songId) {
+		songRepository.save(song);
 	}
 	
-	public void deleteSongById(String id) throws IOException {
-		Song song = repository.findById(id).orElse(null);
+	public void deleteSongById(String songId) throws IOException {
+		Song song = songRepository.findById(songId).orElse(null);
+		
+		List<Playlist> playlists = playlistRepository.findAll();
+		
+		for(Playlist playlist : playlists) {
+			if (playlist.getSongIds().contains(songId)) {
+				playlist.getSongIds().remove(songId);
+				playlistRepository.save(playlist);
+			}
+		}
 		
 		if (song != null) {
 			if(song.getFilePath() != null) {
 				Files.deleteIfExists(Paths.get(song.getFilePath()));
 			}
 			
-			repository.deleteById(id);
+			songRepository.deleteById(songId);
 		}
 	}
 
 	public void uploadSong(MultipartFile songFile, String songId) throws IOException {
 		
-		Song song = repository.findById(songId).orElse(null);
+		Song song = songRepository.findById(songId).orElse(null);
 		
 		String oldPath = song.getFilePath();
 		
@@ -79,7 +92,7 @@ public class SongService {
 		
 		song.setFilePath(filePath.toString());
 		
-		repository.save(song);
+		songRepository.save(song);
 		
 		if (oldPath != null) {
 			Files.deleteIfExists(Paths.get(oldPath));
@@ -88,7 +101,7 @@ public class SongService {
 
 	public Resource streamSong(String songId) throws IOException {
 		
-		Song song = repository.findById(songId).orElse(null);
+		Song song = songRepository.findById(songId).orElse(null);
 		
 		Path filePath = Paths.get(song.getFilePath());
 		
