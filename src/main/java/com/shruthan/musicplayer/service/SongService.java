@@ -47,6 +47,14 @@ public class SongService {
 	public void deleteSongById(String songId) throws IOException {
 		Song song = songRepository.findById(songId).orElse(null);
 		
+		if (song != null) {
+			if(song.getFilePath() != null) {
+				Files.deleteIfExists(Paths.get(song.getFilePath()));
+			}
+			
+			songRepository.deleteById(songId);
+		}
+		
 		List<Playlist> playlists = playlistRepository.findAll();
 		
 		for(Playlist playlist : playlists) {
@@ -54,14 +62,6 @@ public class SongService {
 				playlist.getSongIds().remove(songId);
 				playlistRepository.save(playlist);
 			}
-		}
-		
-		if (song != null) {
-			if(song.getFilePath() != null) {
-				Files.deleteIfExists(Paths.get(song.getFilePath()));
-			}
-			
-			songRepository.deleteById(songId);
 		}
 	}
 
