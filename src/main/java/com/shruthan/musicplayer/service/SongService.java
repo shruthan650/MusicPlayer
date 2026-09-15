@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -72,7 +73,11 @@ public class SongService {
 		byte[] songFileBytes = songFile.getBytes();
 		
 		Path folder = Paths.get("songs");
-		String fileName = songFile.getOriginalFilename();
+		String originalfileName = songFile.getOriginalFilename();
+		
+		String extension = originalfileName.substring(originalfileName.lastIndexOf("."));
+		
+		String fileName = UUID.randomUUID().toString() + extension;
 		
 		Path filePath = folder.resolve(fileName);
 		
