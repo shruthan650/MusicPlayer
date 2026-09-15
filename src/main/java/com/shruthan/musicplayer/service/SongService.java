@@ -53,15 +53,17 @@ public class SongService {
 			}
 			
 			songRepository.deleteById(songId);
-		}
-		
-		List<Playlist> playlists = playlistRepository.findAll();
-		
-		for(Playlist playlist : playlists) {
-			if (playlist.getSongIds().contains(songId)) {
-				playlist.getSongIds().remove(songId);
-				playlistRepository.save(playlist);
+			
+			List<Playlist> playlists = playlistRepository.findAll();
+			
+			for(Playlist playlist : playlists) {
+				if (playlist.getSongIds().contains(songId)) {
+					playlist.getSongIds().remove(songId);
+					playlistRepository.save(playlist);
+				}
 			}
+		} else {
+			return;
 		}
 	}
 
