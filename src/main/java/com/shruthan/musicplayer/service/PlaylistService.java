@@ -1,6 +1,8 @@
 package com.shruthan.musicplayer.service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -24,8 +26,27 @@ public class PlaylistService {
 		return playlistRepo.findAll();
 	}
 	
-	public Playlist getPlaylistById(String id) {
-		return playlistRepo.findById(id).orElse(null);
+	public List<Song> getPlaylistById(String id) {
+		
+		Playlist playlist = playlistRepo.findById(id).orElse(null);
+		
+		if (playlist == null) {
+			return null;
+		}
+		
+		Set<String> songIds = playlist.getSongIds();
+		
+		List<Song> songList = new ArrayList<Song>();
+		
+		for(String songId : songIds) {
+			Song song = songRepo.findById(songId).orElse(null);
+			if (song != null) {
+				songList.add(song);
+			}
+		}
+		
+		return songList;
+		
 	}
 	
 	public Playlist createPlaylist(Playlist playlist) {

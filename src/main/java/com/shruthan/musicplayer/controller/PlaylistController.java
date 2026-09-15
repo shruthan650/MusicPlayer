@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.shruthan.musicplayer.model.Playlist;
+import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.service.PlaylistService;
 
 @RestController
@@ -30,7 +31,7 @@ public class PlaylistController {
 	}
 	
 	@GetMapping("/playlist/{playlistId}")
-	public Playlist getPlaylistById(@PathVariable String playlistId) {
+	public List<Song> getPlaylistById(@PathVariable String playlistId) {
 		return service.getPlaylistById(playlistId);
 	}
 	
