@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.core.io.FileSystemResource;
@@ -42,7 +43,21 @@ public class SongService {
 	}
 	
 	public void updateSongById(Song song, String songId) {
-		songRepository.save(song);
+		
+		Song songInRepo = songRepository.findById(songId).orElse(null);
+		
+		if (songInRepo != null) {
+			
+			songInRepo.setAlbumName(song.getAlbumName());
+			songInRepo.setArtistName(song.getArtistName());
+			songInRepo.setDuration(song.getDuration());
+			songInRepo.setGenre(song.getGenre());
+			songInRepo.setTitle(song.getTitle());
+			songRepository.save(song);
+			
+		} else {
+			return;
+		}
 	}
 	
 	public void deleteSongById(String songId) throws IOException {
