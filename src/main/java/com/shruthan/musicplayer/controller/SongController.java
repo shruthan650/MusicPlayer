@@ -92,11 +92,21 @@ public class SongController {
 			return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/wav")).contentLength(contentLength)
 					.body(body);
 		}
+		
+		HttpRange httpRange;
 
-		HttpRange httpRange = HttpRange.parseRanges(range).get(0);
+		try {
+			httpRange = HttpRange.parseRanges(range).get(0);
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
+		}
 
 		long start = httpRange.getRangeStart(contentLength);
 		long end = httpRange.getRangeEnd(contentLength);
+		
+		if (start < 0 || end < start || start >= contentLength || end >= contentLength) {
+			return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
+		}
 
 		long count = end - start + 1;
 
