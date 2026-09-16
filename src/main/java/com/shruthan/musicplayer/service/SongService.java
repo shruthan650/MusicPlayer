@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,13 +55,11 @@ public class SongService {
 			
 			songRepository.deleteById(songId);
 			
-			List<Playlist> playlists = playlistRepository.findAll();
-			
-			for(Playlist playlist : playlists) {
-				if (playlist.getSongIds().contains(songId)) {
-					playlist.getSongIds().remove(songId);
-					playlistRepository.save(playlist);
-				}
+		    List<Playlist> playlistsContainingSongId = playlistRepository.findBySongIdsContaining(songId);
+		    
+		    for (Playlist playlist : playlistsContainingSongId) {
+				playlist.getSongIds().remove(songId);
+				playlistRepository.save(playlist);
 			}
 		} else {
 			return;
