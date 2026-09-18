@@ -12,6 +12,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.shruthan.musicplayer.exception.InvalidInputException;
+import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
@@ -37,7 +39,13 @@ public class SongService {
 	}
 
 	public Song getSongById(String songId) {
-		return songRepository.findById(songId).orElse(null);
+		Song song = songRepository.findById(songId).orElse(null);
+		
+		if (song == null) {
+			throw new ResourceNotFoundException(songId + " is not present");
+		}
+		
+		return song;
 	}
 
 	public void updateSongById(Song song, String songId) {
@@ -54,7 +62,7 @@ public class SongService {
 			songRepository.save(song);
 
 		} else {
-			return;
+			throw new ResourceNotFoundException("Song not found");
 		}
 	}
 
@@ -75,7 +83,7 @@ public class SongService {
 				playlistRepository.save(playlist);
 			}
 		} else {
-			return;
+			throw new ResourceNotFoundException("Song not found");
 		}
 	}
 
@@ -88,7 +96,8 @@ public class SongService {
 		if (songFile.isEmpty() || songFile.getOriginalFilename().isEmpty()
 				|| !songFile.getOriginalFilename().toLowerCase().contains(".wav")
 				|| !"audio/wav".equals(songFile.getContentType())) {
-			return;
+			
+			throw new InvalidInputException("Only WAV files are supportedS");
 		}
 
 		byte[] songFileBytes = songFile.getBytes();
@@ -126,7 +135,6 @@ public class SongService {
 
 		}
 		
-		return null;
+		throw new ResourceNotFoundException("Song not found");
 	}
-
 }

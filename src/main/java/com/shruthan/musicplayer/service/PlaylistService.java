@@ -6,6 +6,7 @@ import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
+import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
@@ -31,7 +32,7 @@ public class PlaylistService {
 		Playlist playlist = playlistRepo.findById(id).orElse(null);
 		
 		if (playlist == null) {
-			return null;
+			throw new ResourceNotFoundException("Playlist Not Found");
 		}
 		
 		Set<String> songIds = playlist.getSongIds();
@@ -61,6 +62,10 @@ public class PlaylistService {
 		
 		Playlist playlist = playlistRepo.findById(playlistId).orElse(null);
 		
+		if (playlist == null) {
+			throw new ResourceNotFoundException("Can't delete a non-existent playlist");
+		}
+		
 		playlistRepo.delete(playlist);
 	}
 	
@@ -77,7 +82,7 @@ public class PlaylistService {
 			return playlistRepo.save(playlist);
 		}
 		
-		return null;
+		throw new ResourceNotFoundException("Playlist Not Found");
 		
 	}
 	
