@@ -7,6 +7,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.shruthan.musicplayer.dto.UserResponse;
 import com.shruthan.musicplayer.model.Login;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.security.JWTService;
@@ -31,13 +32,19 @@ public class LoginController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerUser(@RequestBody User user) {
+    public ResponseEntity<UserResponse> registerUser(@RequestBody User user) {
 
         User savedUser = userService.registerUser(user);
 
+        UserResponse response = new UserResponse(
+            savedUser.getId(),
+            savedUser.getUserEmail(),
+            savedUser.getRole()
+        );
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(savedUser);
+                .body(response);
     }
     
     @PostMapping("/login")
