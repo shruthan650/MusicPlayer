@@ -9,18 +9,25 @@ import org.springframework.stereotype.Service;
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
+import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
 import com.shruthan.musicplayer.repository.SongRepository;
 
 @Service
 public class PlaylistService {
 	
-	final PlaylistRepository playlistRepo;
-	final SongRepository songRepo;
+	private final PlaylistRepository playlistRepo;
+	private final SongRepository songRepo;
+	private final SecurityService securityService;
 	
-	public PlaylistService(PlaylistRepository playlistRepo, SongRepository songRepo) {
+	public PlaylistService(
+			PlaylistRepository playlistRepo,
+			SongRepository songRepo,
+			SecurityService securityService) {
+		
 		this.playlistRepo = playlistRepo;
 		this.songRepo = songRepo;
+		this.securityService = securityService;
 	}
 
 	public List<Playlist> getAllPlaylists() {
@@ -51,6 +58,10 @@ public class PlaylistService {
 	}
 	
 	public Playlist createPlaylist(Playlist playlist) {
+		
+		User user = securityService.getCurrentUser();
+		playlist.setOwnerId(user.getId());
+		
 		return playlistRepo.save(playlist);
 	}
 	

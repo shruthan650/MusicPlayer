@@ -28,7 +28,11 @@ public class SecurityConfig {
 	private final JWTFilter jwtFilter;
 	private final PasswordEncoder passwordEncoder;
 	
-	public SecurityConfig(UserService userService, JWTFilter jwtFilter, PasswordEncoder passwordEncoder) {
+	public SecurityConfig(
+			UserService userService,
+			JWTFilter jwtFilter,
+			PasswordEncoder passwordEncoder) {
+		
 		this.jwtFilter = jwtFilter;
 		this.passwordEncoder = passwordEncoder;
 		this.userService = userService;

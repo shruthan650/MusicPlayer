@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Document("Playlist")
+@Document("playlistRepo")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,6 +18,8 @@ public class Playlist {
 
 	@Id
 	private String id;
+	
+	private String ownerId;
 	
 	@NotBlank
 	private String name;

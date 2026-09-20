@@ -9,6 +9,7 @@ import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,42 +26,50 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.service.SongService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api")
 public class SongController {
 
-	final SongService service;
+	private final SongService service;
 
 	public SongController(SongService service) {
 		this.service = service;
 	}
 
 	@GetMapping("/songs")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
 	public List<Song> getAllSongs() {
 		return service.getAllSongs();
 	}
 
 	@PostMapping("/song")
-	public Song addSong(@RequestBody Song song) {
+	@PreAuthorize("hasAnyRole('ADMIN', 'ARTIST')")
+	public Song addSong(@Valid @RequestBody Song song) {
 		return service.addSong(song);
 	}
 
-	@GetMapping("/song/{id}")
-	public Song getSongById(@PathVariable String id) {
-		return service.getSongById(id);
+	@GetMapping("/song/{songId}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
+	public Song getSongById(@PathVariable String songId) {
+		return service.getSongById(songId);
 	}
 
-	@PutMapping("/song/{id}")
-	public void updateSongById(@PathVariable String id, @RequestBody Song song) {
-		service.updateSongById(song, id);
+	@PutMapping("/song/{songId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
+	public void updateSongById(@PathVariable String songId, @Valid @RequestBody Song song) {
+		service.updateSongById(song, songId);
 	}
 
-	@DeleteMapping("/song/{id}")
-	public void deleteSongById(@PathVariable String id) throws IOException {
-		service.deleteSongById(id);
+	@DeleteMapping("/song/{songId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
+	public void deleteSongById(@PathVariable String songId) throws IOException {
+		service.deleteSongById(songId);
 	}
 
 	@PostMapping("/song/upload/{songId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
 	public void uploadSong(@RequestParam("songFile") MultipartFile songFile, @PathVariable String songId)
 			throws IOException {
 //		return "File Details {Name : " + songFile.getName() + "\n Size : " + songFile.getSize() + "\n Type : " + songFile.getContentType() + "}";
@@ -69,6 +78,7 @@ public class SongController {
 	}
 
 	@GetMapping("/song/{songId}/audio")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
 	public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String songId,
 			@RequestHeader(value = "Range", required = false) String range) throws IOException {
 

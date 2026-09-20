@@ -20,7 +20,11 @@ public class LoginController {
     private final AuthenticationManager authenticationManager;
     private final JWTService jwtService;
 
-    public LoginController(UserService userService, AuthenticationManager authenticationManager, JWTService jwtService) {
+    public LoginController(
+    		UserService userService,
+    		AuthenticationManager authenticationManager,
+    		JWTService jwtService) {
+    	
         this.userService = userService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
