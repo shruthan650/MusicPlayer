@@ -4,6 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.TagException;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
@@ -71,7 +75,7 @@ public class SongController {
 	@PostMapping("/song/upload/{songId}")
 	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
 	public void uploadSong(@RequestParam("songFile") MultipartFile songFile, @PathVariable String songId)
-			throws IOException {
+			throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
 //		return "File Details {Name : " + songFile.getName() + "\n Size : " + songFile.getSize() + "\n Type : " + songFile.getContentType() + "}";
 
 		service.uploadSong(songFile, songId);
