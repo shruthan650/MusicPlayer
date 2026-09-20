@@ -8,9 +8,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.shruthan.musicplayer.dto.LoginResponse;
 import com.shruthan.musicplayer.dto.PasswordUpdateRequest;
 import com.shruthan.musicplayer.dto.UserResponse;
 import com.shruthan.musicplayer.service.UserService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/user")
@@ -30,7 +33,7 @@ public class UserController {
 
     @PutMapping("/email")
     @PreAuthorize("isAuthenticated()")
-    public UserResponse updateEmail(@RequestParam String email) {
+    public LoginResponse updateEmail(@RequestParam String email) {
         return service.updateEmail(email);
     }
 
@@ -41,7 +44,6 @@ public class UserController {
 
         service.updatePassword(
                 request.getOldPassword(),
-                request.getNewPassword()
-        );
+                request.getNewPassword());
     }
 }

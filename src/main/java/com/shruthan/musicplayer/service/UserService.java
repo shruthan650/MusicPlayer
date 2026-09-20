@@ -97,14 +97,14 @@ public class UserService implements UserDetailsService {
 
 	public void updatePassword(String oldPassword, String newPassword) {
 
-		User user = securityService.getCurrentUser();
+	    User user = securityService.getCurrentUser();
 
-		if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-			throw new InvalidInputException("Incorrect current password");
-		}
+	    if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+	        throw new InvalidInputException("Incorrect current password");
+	    }
 
-		user.setPassword(passwordEncoder.encode(newPassword));
+	    user.setPassword(passwordEncoder.encode(newPassword));
 
-		userRepository.save(user);
+	    userRepository.save(user);
 	}
 }
