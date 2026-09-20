@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import org.jaudiotagger.audio.AudioFile;
@@ -18,6 +16,8 @@ import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
 import org.jaudiotagger.tag.TagException;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,10 +45,9 @@ public class SongService {
 		this.securityService = securityService;
 	}
 
-	public org.springframework.data.domain.Page<Song> getAllSongs(
-	        org.springframework.data.domain.Pageable pageable) {
+	public org.springframework.data.domain.Page<Song> getAllSongs(org.springframework.data.domain.Pageable pageable) {
 
-	    return songRepository.findAll(pageable);
+		return songRepository.findAll(pageable);
 	}
 
 	public Song addSong(Song song) {
@@ -188,20 +187,8 @@ public class SongService {
 		throw new ResourceNotFoundException("Song not found");
 	}
 
-	public Set<Song> searchSongs(String songName) {
-		List<Song> byTitle = songRepository.findByTitleContainingIgnoreCase(songName);
-
-		List<Song> byArtist = songRepository.findByArtistNameContainingIgnoreCase(songName);
-
-		List<Song> byAlbum = songRepository.findByAlbumNameContainingIgnoreCase(songName);
-
-		Set<Song> songs = new HashSet<Song>();
-
-		songs.addAll(byTitle);
-		songs.addAll(byArtist);
-		songs.addAll(byAlbum);
-
-		return songs;
-
+	public Page<Song> searchSongs(String query, Pageable pageable) {
+		return songRepository.searchSongs(query, pageable);
 	}
+
 }

@@ -2,13 +2,14 @@ package com.shruthan.musicplayer.controller;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Set;
 
 import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
 import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
 import org.jaudiotagger.tag.TagException;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
@@ -27,10 +28,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-import org.springframework.data.domain.Pageable;
+
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.service.SongService;
-import org.springframework.data.domain.Page;
 
 import jakarta.validation.Valid;
 
@@ -86,8 +86,11 @@ public class SongController {
 
 	@GetMapping("/songs/search")
 	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public Set<Song> searchSongs(@RequestParam String songName) {
-	    return service.searchSongs(songName);
+	public Page<Song> searchSongs(
+	        @RequestParam String q,
+	        @PageableDefault(size = 10, page = 0) Pageable pageable) {
+
+	    return service.searchSongs(q, pageable);
 	}
 	
 	@GetMapping("/song/{songId}/audio")
