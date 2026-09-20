@@ -3,6 +3,7 @@ package com.shruthan.musicplayer.controller;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
@@ -81,6 +82,12 @@ public class SongController {
 		service.uploadSong(songFile, songId);
 	}
 
+	@GetMapping("/songs/search")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
+	public Set<Song> searchSongs(@RequestParam String songName) {
+	    return service.searchSongs(songName);
+	}
+	
 	@GetMapping("/song/{songId}/audio")
 	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
 	public ResponseEntity<StreamingResponseBody> streamSong(

@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jaudiotagger.audio.AudioFile;
@@ -104,73 +107,67 @@ public class SongService {
 		}
 	}
 
-	public void uploadSong(MultipartFile songFile, String songId) throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
+	public void uploadSong(MultipartFile songFile, String songId)
+			throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
 
-	    Song song = songRepository.findById(songId)
-	            .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
-	    String oldPath = song.getFilePath();
+		String oldPath = song.getFilePath();
 
-	    String originalFileName = songFile.getOriginalFilename();
+		String originalFileName = songFile.getOriginalFilename();
 
-	    if (songFile.isEmpty()
-	            || originalFileName == null
-	            || originalFileName.isBlank()) {
+		if (songFile.isEmpty() || originalFileName == null || originalFileName.isBlank()) {
 
-	        throw new InvalidInputException("Invalid audio file");
-	    }
+			throw new InvalidInputException("Invalid audio file");
+		}
 
-	    String extension = originalFileName
-	            .substring(originalFileName.lastIndexOf(".") + 1)
-	            .toLowerCase();
+		String extension = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
 
-	    String contentType = songFile.getContentType();
+		String contentType = songFile.getContentType();
 
-	    if (!extension.equals("wav") && !extension.equals("mp3")) {
-	        throw new InvalidInputException("Only WAV and MP3 files are supported");
-	    }
+		if (!extension.equals("wav") && !extension.equals("mp3")) {
+			throw new InvalidInputException("Only WAV and MP3 files are supported");
+		}
 
-	    if (extension.equals("wav")
-	            && !"audio/wav".equalsIgnoreCase(contentType)) {
+		if (extension.equals("wav") && !"audio/wav".equalsIgnoreCase(contentType)) {
 
-	        throw new InvalidInputException("Invalid WAV file type");
-	    }
+			throw new InvalidInputException("Invalid WAV file type");
+		}
 
-	    if (extension.equals("mp3")
-	            && !"audio/mpeg".equalsIgnoreCase(contentType)) {
+		if (extension.equals("mp3") && !"audio/mpeg".equalsIgnoreCase(contentType)) {
 
-	        throw new InvalidInputException("Invalid MP3 file type");
-	    }
+			throw new InvalidInputException("Invalid MP3 file type");
+		}
 
-	    Path folder = Paths.get("songs");
+		Path folder = Paths.get("songs");
 
-	    Files.createDirectories(folder);
+		Files.createDirectories(folder);
 
-	    String fileName = UUID.randomUUID() + "." + extension;
+		String fileName = UUID.randomUUID() + "." + extension;
 
-	    Path filePath = folder.resolve(fileName);
+		Path filePath = folder.resolve(fileName);
 
-	    Files.write(filePath, songFile.getBytes());
+		Files.write(filePath, songFile.getBytes());
 
-	    // Read audio duration
-	    AudioFile audioFile = AudioFileIO.read(filePath.toFile());
+		// Read audio duration
+		AudioFile audioFile = AudioFileIO.read(filePath.toFile());
 
-	    AudioHeader audioHeader = audioFile.getAudioHeader();
+		AudioHeader audioHeader = audioFile.getAudioHeader();
 
-	    int durationInSeconds = audioHeader.getTrackLength();
+		int durationInSeconds = audioHeader.getTrackLength();
 
-	    long durationInMilliseconds = durationInSeconds * 1000L;
+		long durationInMilliseconds = durationInSeconds * 1000L;
 
-	    song.setDuration(durationInMilliseconds);
+		song.setDuration(durationInMilliseconds);
 
-	    song.setFilePath(filePath.toString());
+		song.setFilePath(filePath.toString());
 
-	    songRepository.save(song);
+		songRepository.save(song);
 
-	    // Delete old audio file
-	    if (oldPath != null) {
-	        Files.deleteIfExists(Paths.get(oldPath));
-	    }
+		// Delete old audio file
+		if (oldPath != null) {
+			Files.deleteIfExists(Paths.get(oldPath));
+		}
 	}
 
 	public Resource streamSong(String songId) throws IOException {
@@ -188,5 +185,22 @@ public class SongService {
 		}
 
 		throw new ResourceNotFoundException("Song not found");
+	}
+
+	public Set<Song> searchSongs(String songName) {
+		List<Song> byTitle = songRepository.findByTitleContainingIgnoreCase(songName);
+
+		List<Song> byArtist = songRepository.findByArtistNameContainingIgnoreCase(songName);
+
+		List<Song> byAlbum = songRepository.findByAlbumNameContainingIgnoreCase(songName);
+
+		Set<Song> songs = new HashSet<Song>();
+
+		songs.addAll(byTitle);
+		songs.addAll(byArtist);
+		songs.addAll(byAlbum);
+
+		return songs;
+
 	}
 }
