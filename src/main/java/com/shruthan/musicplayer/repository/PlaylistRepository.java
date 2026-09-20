@@ -7,7 +7,9 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import com.shruthan.musicplayer.model.Playlist;
 
 
-public interface PlaylistRepository extends MongoRepository<Playlist, String>{
+public interface PlaylistRepository extends MongoRepository<Playlist, String> {
 
-	public List<Playlist> findBySongIdsContaining(String songIds);
+    List<Playlist> findBySongIdsContaining(String songId);
+
+    List<Playlist> findByOwnerId(String ownerId);
 }
