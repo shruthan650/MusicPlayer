@@ -13,6 +13,8 @@ import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.security.JWTService;
 import com.shruthan.musicplayer.service.UserService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api")
 public class LoginController {
@@ -32,7 +34,7 @@ public class LoginController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody User user) {
+    public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody User user) {
 
         User savedUser = userService.registerUser(user);
 

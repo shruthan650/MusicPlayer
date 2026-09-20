@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.shruthan.musicplayer.exception.InvalidInputException;
 import com.shruthan.musicplayer.model.Role;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.UserRepository;
@@ -42,16 +43,22 @@ public class UserService implements UserDetailsService {
     }
 
     public User registerUser(User user) {
+    	
+    	if (user.getRole() == null) {
+    	    throw new InvalidInputException("Role is required");
+    	}
+    	
+    	if (user.getRole() == Role.ADMIN) {
+    	    throw new InvalidInputException("Admin registration is not allowed");
+    	}
 
         if (userRepository.findByUserEmail(user.getUserEmail()) != null) {
-            throw new IllegalArgumentException("Email already registered");
+            throw new InvalidInputException("Email already registered");
         }
 
         user.setPassword(
             passwordEncoder.encode(user.getPassword())
         );
-
-        user.setRole(Role.USER);
 
         return userRepository.save(user);
     }
