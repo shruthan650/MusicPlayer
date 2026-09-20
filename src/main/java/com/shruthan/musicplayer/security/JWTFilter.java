@@ -74,7 +74,7 @@ public class JWTFilter extends OncePerRequestFilter {
                 }
 
             } catch (JwtException ex) {
-                throw new JwtException("jwt token malformed");
+
             }
         }
 

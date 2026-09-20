@@ -28,11 +28,9 @@ public class SongService {
 	final PlaylistRepository playlistRepository;
 	final SecurityService securityService;
 
-	SongService(SongRepository repository,
-			PlaylistRepository playlistRepository,
-			UserRepository userRepository,
+	SongService(SongRepository repository, PlaylistRepository playlistRepository, UserRepository userRepository,
 			SecurityService securityService) {
-		
+
 		this.songRepository = repository;
 		this.playlistRepository = playlistRepository;
 		this.securityService = securityService;
@@ -43,20 +41,20 @@ public class SongService {
 	}
 
 	public Song addSong(Song song) {
-		
+
 		User user = securityService.getCurrentUser();
 		song.setOwnerId(user.getId());
-		
+
 		return songRepository.save(song);
 	}
 
 	public Song getSongById(String songId) {
 		Song song = songRepository.findById(songId).orElse(null);
-		
+
 		if (song == null) {
 			throw new ResourceNotFoundException(songId + " is not present");
 		}
-		
+
 		return song;
 	}
 
@@ -101,27 +99,42 @@ public class SongService {
 
 	public void uploadSong(MultipartFile songFile, String songId) throws IOException {
 
-		Song song = songRepository.findById(songId).orElse(null);
+		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
 		String oldPath = song.getFilePath();
 
-		if (songFile.isEmpty() || songFile.getOriginalFilename().isEmpty()
-				|| !songFile.getOriginalFilename().toLowerCase().contains(".wav")
-				|| !"audio/wav".equals(songFile.getContentType())) {
-			
-			throw new InvalidInputException("Only WAV files are supportedS");
+		String originalFileName = songFile.getOriginalFilename();
+
+		if (songFile.isEmpty() || originalFileName == null || originalFileName.isBlank()) {
+			throw new InvalidInputException("Invalid audio file");
+		}
+
+		String extension = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
+
+		String contentType = songFile.getContentType();
+
+		if (!extension.equals("wav") && !extension.equals("mp3")) {
+			throw new InvalidInputException("Only WAV and MP3 files are supported");
+		}
+
+		if (extension.equals("wav") && !"audio/wav".equalsIgnoreCase(contentType)) {
+			throw new InvalidInputException("Invalid WAV file type");
+		}
+
+		if (extension.equals("mp3") && !"audio/mpeg".equalsIgnoreCase(contentType)) {
+			throw new InvalidInputException("Invalid MP3 file type");
 		}
 
 		byte[] songFileBytes = songFile.getBytes();
 
 		Path folder = Paths.get("songs");
-		String originalfileName = songFile.getOriginalFilename();
-		String extension = originalfileName.substring(originalfileName.lastIndexOf("."));
-		String fileName = UUID.randomUUID().toString() + extension;
+
+		String fileName = UUID.randomUUID() + "." + extension;
 
 		Path filePath = folder.resolve(fileName);
 
 		Files.createDirectories(folder);
+
 		Files.write(filePath, songFileBytes);
 
 		song.setFilePath(filePath.toString());
@@ -146,7 +159,7 @@ public class SongService {
 			}
 
 		}
-		
+
 		throw new ResourceNotFoundException("Song not found");
 	}
 }

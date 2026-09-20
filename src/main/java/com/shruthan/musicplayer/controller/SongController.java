@@ -79,75 +79,127 @@ public class SongController {
 
 	@GetMapping("/song/{songId}/audio")
 	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String songId,
-			@RequestHeader(value = "Range", required = false) String range) throws IOException {
+	public ResponseEntity<StreamingResponseBody> streamSong(
+	        @PathVariable String songId,
+	        @RequestHeader(value = "Range", required = false) String range)
+	        throws IOException {
 
-		Resource resource = service.streamSong(songId);
-		
-		if (resource == null) {
-			return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-		}
+	    Resource resource = service.streamSong(songId);
 
-		long contentLength = resource.contentLength();
+	    if (resource == null) {
+	        return ResponseEntity
+	                .status(HttpStatus.NOT_FOUND)
+	                .build();
+	    }
 
-		if (range == null) {
+	    long contentLength = resource.contentLength();
 
-			StreamingResponseBody body = outputStream -> {
-				try (InputStream inputStream = resource.getInputStream()) {
-					inputStream.transferTo(outputStream);
-				}
-			};
+	    String fileName = resource.getFilename().toLowerCase();
 
-			return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/wav")).contentLength(contentLength)
-					.body(body);
-		}
-		
-		HttpRange httpRange;
+	    MediaType mediaType;
 
-		try {
-			httpRange = HttpRange.parseRanges(range).get(0);
-		} catch (IllegalArgumentException e) {
-			return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
-		}
+	    if (fileName.endsWith(".mp3")) {
+	        mediaType = MediaType.parseMediaType("audio/mpeg");
+	    } else if (fileName.endsWith(".wav")) {
+	        mediaType = MediaType.parseMediaType("audio/wav");
+	    } else {
+	        return ResponseEntity
+	                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+	                .build();
+	    }
 
-		long start = httpRange.getRangeStart(contentLength);
-		long end = httpRange.getRangeEnd(contentLength);
-		
-		if (start < 0 || end < start || start >= contentLength || end >= contentLength) {
-			return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
-		}
+	    if (range == null) {
 
-		long count = end - start + 1;
+	        StreamingResponseBody body = outputStream -> {
 
-		StreamingResponseBody body = outputStream -> {
+	            try (InputStream inputStream = resource.getInputStream()) {
+	                inputStream.transferTo(outputStream);
+	            }
 
-			try (InputStream inputStream = resource.getInputStream()) {
+	        };
 
-				inputStream.skip(start);
+	        return ResponseEntity
+	                .ok()
+	                .contentType(mediaType)
+	                .contentLength(contentLength)
+	                .body(body);
+	    }
 
-				byte[] buffer = new byte[8192];
+	    HttpRange httpRange;
 
-				long remaining = count;
+	    try {
+	        httpRange = HttpRange.parseRanges(range).get(0);
+	    } catch (IllegalArgumentException e) {
 
-				while (remaining > 0) {
+	        return ResponseEntity
+	                .status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+	                .build();
+	    }
 
-					int bytesToRead = (int) Math.min(buffer.length, remaining);
+	    long start = httpRange.getRangeStart(contentLength);
+	    long end = httpRange.getRangeEnd(contentLength);
 
-					int bytesRead = inputStream.read(buffer, 0, bytesToRead);
+	    if (start < 0 ||
+	            end < start ||
+	            start >= contentLength ||
+	            end >= contentLength) {
 
-					if (bytesRead == -1) {
-						break;
-					}
+	        return ResponseEntity
+	                .status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+	                .build();
+	    }
 
-					outputStream.write(buffer, 0, bytesRead);
+	    long count = end - start + 1;
 
-					remaining -= bytesRead;
-				}
-			}
-		};
+	    StreamingResponseBody body = outputStream -> {
 
-		return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).header("Accept-Ranges", "bytes")
-				.header("Content-Range", "bytes " + start + "-" + end + "/" + contentLength).contentLength(count)
-				.contentType(MediaType.parseMediaType("audio/wav")).body(body);
+	        try (InputStream inputStream = resource.getInputStream()) {
+
+	            long skipped = 0;
+
+	            while (skipped < start) {
+
+	                long currentSkip = inputStream.skip(start - skipped);
+
+	                if (currentSkip == 0) {
+	                    break;
+	                }
+
+	                skipped += currentSkip;
+	            }
+
+	            byte[] buffer = new byte[8192];
+
+	            long remaining = count;
+
+	            while (remaining > 0) {
+
+	                int bytesToRead =
+	                        (int) Math.min(buffer.length, remaining);
+
+	                int bytesRead =
+	                        inputStream.read(buffer, 0, bytesToRead);
+
+	                if (bytesRead == -1) {
+	                    break;
+	                }
+
+	                outputStream.write(buffer, 0, bytesRead);
+
+	                remaining -= bytesRead;
+	            }
+	        }
+	    };
+
+	    return ResponseEntity
+	            .status(HttpStatus.PARTIAL_CONTENT)
+	            .header("Accept-Ranges", "bytes")
+	            .header(
+	                    "Content-Range",
+	                    "bytes " + start + "-" + end + "/" + contentLength
+	            )
+	            .contentLength(count)
+	            .contentType(mediaType)
+	            .body(body);
 	}
 }
