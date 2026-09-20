@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -46,8 +45,10 @@ public class SongService {
 		this.securityService = securityService;
 	}
 
-	public List<Song> getAllSongs() {
-		return songRepository.findAll();
+	public org.springframework.data.domain.Page<Song> getAllSongs(
+	        org.springframework.data.domain.Pageable pageable) {
+
+	    return songRepository.findAll(pageable);
 	}
 
 	public Song addSong(Song song) {
