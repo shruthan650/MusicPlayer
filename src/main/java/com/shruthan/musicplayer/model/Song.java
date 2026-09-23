@@ -30,7 +30,6 @@ public class Song {
 	
 	private String genre;
 	
-	@NotNull
 	private Long duration;
 
 	@NotBlank
