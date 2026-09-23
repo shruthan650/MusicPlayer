@@ -1,5 +1,8 @@
 package com.shruthan.musicplayer.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -26,4 +29,6 @@ public class User {
 	
 	@NotNull
 	private Role role;
+	
+	private Set<String> likedSongIds = new HashSet<>();
 }

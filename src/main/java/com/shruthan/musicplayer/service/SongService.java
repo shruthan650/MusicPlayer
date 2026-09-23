@@ -35,6 +35,7 @@ public class SongService {
 
 	final SongRepository songRepository;
 	final PlaylistRepository playlistRepository;
+	final UserRepository userRepository;
 	final SecurityService securityService;
 
 	SongService(SongRepository repository, PlaylistRepository playlistRepository, UserRepository userRepository,
@@ -43,6 +44,7 @@ public class SongService {
 		this.songRepository = repository;
 		this.playlistRepository = playlistRepository;
 		this.securityService = securityService;
+		this.userRepository = userRepository;
 	}
 
 	public org.springframework.data.domain.Page<Song> getAllSongs(org.springframework.data.domain.Pageable pageable) {
@@ -102,6 +104,14 @@ public class SongService {
 				playlist.getSongIds().remove(songId);
 				playlistRepository.save(playlist);
 			}
+			
+			List<User> users = userRepository.findByLikedSongIdsContaining(songId);
+
+			for (User user : users) {
+			    user.getLikedSongIds().remove(songId);
+			    userRepository.save(user);
+			}
+			
 		} else {
 			throw new ResourceNotFoundException("Song not found");
 		}
