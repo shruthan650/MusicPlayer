@@ -1,9 +1,5 @@
 package com.shruthan.musicplayer.service;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,10 +9,9 @@ import org.springframework.stereotype.Service;
 import com.shruthan.musicplayer.dto.LoginResponse;
 import com.shruthan.musicplayer.dto.UserResponse;
 import com.shruthan.musicplayer.exception.InvalidInputException;
-import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Role;
-import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.model.User;
+import com.shruthan.musicplayer.repository.PlayHistoryRepository;
 import com.shruthan.musicplayer.repository.SongRepository;
 import com.shruthan.musicplayer.repository.UserRepository;
 import com.shruthan.musicplayer.security.CustomUserDetails;
@@ -30,15 +25,23 @@ public class UserService implements UserDetailsService {
 	private final SecurityService securityService;
 	private final JWTService jwtService;
 	private final SongRepository songRepository;
+	private final PlayHistoryRepository playHistoryRepository;
 
-	public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, SecurityService securityService,
-			JWTService jwtService, SongRepository songRepository) {
+	public UserService(
+			UserRepository userRepository, 
+			PasswordEncoder passwordEncoder, 
+			SecurityService securityService,
+			JWTService jwtService, 
+			SongRepository songRepository, 
+			PlayHistoryRepository playHistoryRepository
+			) {
 
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.securityService = securityService;
 		this.jwtService = jwtService;
 		this.songRepository = songRepository;
+		this.playHistoryRepository = playHistoryRepository;
 	}
 
 	public User loadUserByEmail(String userEmail) {
@@ -115,52 +118,5 @@ public class UserService implements UserDetailsService {
 	    user.setPassword(passwordEncoder.encode(newPassword));
 
 	    userRepository.save(user);
-	}
-
-	public void likeSong(String songId) {
-
-	    User user = securityService.getCurrentUser();
-
-	    songRepository.findById(songId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Song not found"));
-
-	    if (user.getLikedSongIds() == null) {
-	        user.setLikedSongIds(new HashSet<>());
-	    }
-
-	    user.getLikedSongIds().add(songId);
-
-	    userRepository.save(user);
-	}
-
-	public void unlikeSong(String songId) {
-
-	    User user = securityService.getCurrentUser();
-
-	    if (user.getLikedSongIds() != null) {
-	        user.getLikedSongIds().remove(songId);
-	    }
-
-	    userRepository.save(user);
-	}
-	
-	public List<Song> getLikedSongs() {
-
-	    User user = securityService.getCurrentUser();
-
-	    List<Song> songs = new ArrayList<>();
-
-	    if (user.getLikedSongIds() == null) {
-	        return songs;
-	    }
-
-	    for (String songId : user.getLikedSongIds()) {
-
-	        songRepository.findById(songId)
-	                .ifPresent(songs::add);
-	    }
-
-	    return songs;
 	}
 }
