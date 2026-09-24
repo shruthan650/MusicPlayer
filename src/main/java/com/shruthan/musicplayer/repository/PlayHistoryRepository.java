@@ -14,4 +14,6 @@ public interface PlayHistoryRepository extends MongoRepository<PlayHistory, Stri
 	Optional<PlayHistory> findByUserIdAndSongId(
             String userId,
             String songId);
+	
+	void deleteBySongId(String songId);
 }

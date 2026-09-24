@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.shruthan.musicplayer.model.Song;
+import com.shruthan.musicplayer.service.PlayHistoryService;
 import com.shruthan.musicplayer.service.SongService;
 
 import jakarta.validation.Valid;
@@ -38,41 +39,43 @@ import jakarta.validation.Valid;
 @RequestMapping("/api")
 public class SongController {
 
-	private final SongService service;
+	private final SongService songService;
+	private final PlayHistoryService playHistoryService;
 
-	public SongController(SongService service) {
-		this.service = service;
+	public SongController(SongService service, PlayHistoryService playHistoryService) {
+		this.songService = service;
+		this.playHistoryService = playHistoryService;
 	}
 
 	@GetMapping("/songs")
 	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
 	public Page<Song> getAllSongs(
 			@PageableDefault(size = 10, page = 0) Pageable pageable) {
-	    return service.getAllSongs(pageable);
+	    return songService.getAllSongs(pageable);
 	}
 
 	@PostMapping("/song")
 	@PreAuthorize("hasAnyRole('ADMIN', 'ARTIST')")
 	public Song addSong(@Valid @RequestBody Song song) {
-		return service.addSong(song);
+		return songService.addSong(song);
 	}
 
 	@GetMapping("/song/{songId}")
 	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
 	public Song getSongById(@PathVariable String songId) {
-		return service.getSongById(songId);
+		return songService.getSongById(songId);
 	}
 
 	@PutMapping("/song/{songId}")
 	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
 	public void updateSongById(@PathVariable String songId, @Valid @RequestBody Song song) {
-		service.updateSongById(song, songId);
+		songService.updateSongById(song, songId);
 	}
 
 	@DeleteMapping("/song/{songId}")
 	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
 	public void deleteSongById(@PathVariable String songId) throws IOException {
-		service.deleteSongById(songId);
+		songService.deleteSongById(songId);
 	}
 
 	@PostMapping("/song/upload/{songId}")
@@ -81,7 +84,7 @@ public class SongController {
 			throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
 //		return "File Details {Name : " + songFile.getName() + "\n Size : " + songFile.getSize() + "\n Type : " + songFile.getContentType() + "}";
 
-		service.uploadSong(songFile, songId);
+		songService.uploadSong(songFile, songId);
 	}
 
 	@GetMapping("/songs/search")
@@ -90,7 +93,7 @@ public class SongController {
 	        @RequestParam String q,
 	        @PageableDefault(size = 10, page = 0) Pageable pageable) {
 
-	    return service.searchSongs(q, pageable);
+	    return songService.searchSongs(q, pageable);
 	}
 	
 	@GetMapping("/song/{songId}/audio")
@@ -100,13 +103,15 @@ public class SongController {
 	        @RequestHeader(value = "Range", required = false) String range)
 	        throws IOException {
 
-	    Resource resource = service.streamSong(songId);
+	    Resource resource = songService.streamSong(songId);
 
 	    if (resource == null) {
 	        return ResponseEntity
 	                .status(HttpStatus.NOT_FOUND)
 	                .build();
 	    }
+	    
+	    playHistoryService.addToHistory(songId);
 
 	    long contentLength = resource.contentLength();
 

@@ -26,6 +26,7 @@ import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.model.User;
+import com.shruthan.musicplayer.repository.PlayHistoryRepository;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
 import com.shruthan.musicplayer.repository.SongRepository;
 import com.shruthan.musicplayer.repository.UserRepository;
@@ -33,18 +34,20 @@ import com.shruthan.musicplayer.repository.UserRepository;
 @Service
 public class SongService {
 
-	final SongRepository songRepository;
-	final PlaylistRepository playlistRepository;
-	final UserRepository userRepository;
-	final SecurityService securityService;
+	private final SongRepository songRepository;
+	private final PlaylistRepository playlistRepository;
+	private final UserRepository userRepository;
+	private final SecurityService securityService;
+	private final PlayHistoryRepository playHistoryRepository;
 
 	SongService(SongRepository repository, PlaylistRepository playlistRepository, UserRepository userRepository,
-			SecurityService securityService) {
+			SecurityService securityService, PlayHistoryRepository playHistoryRepository) {
 
 		this.songRepository = repository;
 		this.playlistRepository = playlistRepository;
 		this.securityService = securityService;
 		this.userRepository = userRepository;
+		this.playHistoryRepository = playHistoryRepository;
 	}
 
 	public org.springframework.data.domain.Page<Song> getAllSongs(org.springframework.data.domain.Pageable pageable) {
@@ -97,7 +100,9 @@ public class SongService {
 			}
 
 			songRepository.deleteById(songId);
-
+			playHistoryRepository.deleteBySongId(songId);
+			
+			
 			List<Playlist> playlistsContainingSongId = playlistRepository.findBySongIdsContaining(songId);
 
 			for (Playlist playlist : playlistsContainingSongId) {
