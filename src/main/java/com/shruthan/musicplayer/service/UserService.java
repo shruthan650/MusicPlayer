@@ -24,8 +24,6 @@ public class UserService implements UserDetailsService {
 	private final PasswordEncoder passwordEncoder;
 	private final SecurityService securityService;
 	private final JWTService jwtService;
-	private final SongRepository songRepository;
-	private final PlayHistoryRepository playHistoryRepository;
 
 	public UserService(
 			UserRepository userRepository, 
@@ -40,8 +38,6 @@ public class UserService implements UserDetailsService {
 		this.passwordEncoder = passwordEncoder;
 		this.securityService = securityService;
 		this.jwtService = jwtService;
-		this.songRepository = songRepository;
-		this.playHistoryRepository = playHistoryRepository;
 	}
 
 	public User loadUserByEmail(String userEmail) {

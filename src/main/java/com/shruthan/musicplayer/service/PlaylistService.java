@@ -1,12 +1,11 @@
 package com.shruthan.musicplayer.service;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
+import com.shruthan.musicplayer.exception.InvalidInputException;
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
@@ -16,112 +15,127 @@ import com.shruthan.musicplayer.repository.SongRepository;
 
 @Service
 public class PlaylistService {
-	
+
 	private final PlaylistRepository playlistRepo;
 	private final SongRepository songRepo;
 	private final SecurityService securityService;
-	
-	public PlaylistService(
-			PlaylistRepository playlistRepo,
-			SongRepository songRepo,
-			SecurityService securityService) {
-		
+
+	public PlaylistService(PlaylistRepository playlistRepo,
+							SongRepository songRepo,
+							SecurityService securityService
+							) {
+
 		this.playlistRepo = playlistRepo;
 		this.songRepo = songRepo;
 		this.securityService = securityService;
 	}
-	
+
 	public List<Playlist> getAllPlaylists() {
 
-	    User user = securityService.getCurrentUser();
+		User user = securityService.getCurrentUser();
 
-	    if (user == null) {
-	        throw new ResourceNotFoundException("User not found");
-	    }
+		if (user == null) {
+			throw new ResourceNotFoundException("User not found");
+		}
 
-	    return playlistRepo.findByOwnerId(user.getId());
+		return playlistRepo.findByOwnerId(user.getId());
 	}
-	
+
 	public List<Song> getPlaylistById(String playlistId) {
 
-	    Playlist playlist = playlistRepo.findById(playlistId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Playlist not found"));
+		Playlist playlist = playlistRepo.findById(playlistId)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
 
-	    if (playlist.getSongIds() == null || playlist.getSongIds().isEmpty()) {
-	        return new ArrayList<>();
-	    }
+		if (playlist.getSongIds() == null || playlist.getSongIds().isEmpty()) {
+			return new ArrayList<>();
+		}
 
-	    List<Song> songs = new ArrayList<>();
+		List<Song> songs = new ArrayList<>();
 
-	    for (String songId : playlist.getSongIds()) {
+		for (String songId : playlist.getSongIds()) {
 
-	        songRepo.findById(songId)
-	                .ifPresent(songs::add);
-	    }
+			songRepo.findById(songId).ifPresent(songs::add);
+		}
 
-	    return songs;
+		return songs;
 	}
-	
+
 	public Playlist createPlaylist(Playlist playlist) {
-		
+
 		User user = securityService.getCurrentUser();
 		playlist.setOwnerId(user.getId());
+
+		return playlistRepo.save(playlist);
+	}
+
+	public Playlist updatePlaylistById(Playlist playlist, String id) {
+
+		Playlist existingPlaylist = playlistRepo.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
+
+		existingPlaylist.setName(playlist.getName());
+
+		return playlistRepo.save(existingPlaylist);
+	}
+
+	public void deletePlaylistById(String id) {
+
+		Playlist playlist = playlistRepo.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
+
+		playlistRepo.delete(playlist);
+	}
+
+	public void addSongToPlaylist(String songId, String playlistId) {
+
+		Playlist playlist = playlistRepo.findById(playlistId)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
+
+		songRepo.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+		if (playlist.getSongIds() == null) {
+			playlist.setSongIds(new ArrayList<>());
+		}
+
+		playlist.getSongIds().add(songId);
+
+		playlistRepo.save(playlist);
+	}
+
+	public Playlist removeSongFromPlaylist(String songId, String playlistId) {
+
+		Playlist playlist = playlistRepo.findById(playlistId)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
+
+		if (playlist.getSongIds() != null) {
+			playlist.getSongIds().remove(songId);
+		}
+
+		return playlistRepo.save(playlist);
+	}
+
+	public Playlist moveSongToDesiredPosition(String playlistId, String songId, int position) {
+
+		Playlist playlist = playlistRepo.findById(playlistId)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
+
+		Song song = songRepo.findById(songId)
+				.orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+		if (position < 0 || position >= playlist.getSongIds().size()) {
+			throw new InvalidInputException("Position is not valid");
+		}
+
+		int currPos = playlist.getSongIds().indexOf(songId);
+		
+		if (currPos == -1) {
+			throw new ResourceNotFoundException("Song not present in playlist");
+		}
+		
+		playlist.getSongIds().remove(currPos);
+		playlist.getSongIds().add(position, songId);
 		
 		return playlistRepo.save(playlist);
 	}
-	
-	public Playlist updatePlaylistById(Playlist playlist, String id) {
 
-	    Playlist existingPlaylist = playlistRepo.findById(id)
-	            .orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
-
-	    existingPlaylist.setName(playlist.getName());
-
-	    return playlistRepo.save(existingPlaylist);
-	}
-	
-	public void deletePlaylistById(String id) {
-
-	    Playlist playlist = playlistRepo.findById(id)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Playlist not found"));
-
-	    playlistRepo.delete(playlist);
-	}
-	
-	public void addSongToPlaylist(String songId, String playlistId) {
-
-	    Playlist playlist = playlistRepo.findById(playlistId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Playlist not found"));
-
-	    songRepo.findById(songId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Song not found"));
-
-	    if (playlist.getSongIds() == null) {
-	        playlist.setSongIds(new HashSet<>());
-	    }
-
-	    playlist.getSongIds().add(songId);
-
-	    playlistRepo.save(playlist);
-	}
-	
-	
-	public Playlist removeSongFromPlaylist(String songId, String playlistId) {
-
-	    Playlist playlist = playlistRepo.findById(playlistId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Playlist not found"));
-
-	    if (playlist.getSongIds() != null) {
-	        playlist.getSongIds().remove(songId);
-	    }
-
-	    return playlistRepo.save(playlist);
-	}
-	
-	
 }

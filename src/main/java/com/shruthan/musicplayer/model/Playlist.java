@@ -1,6 +1,6 @@
 package com.shruthan.musicplayer.model;
 
-import java.util.Set;
+import java.util.List;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -24,5 +24,5 @@ public class Playlist {
 	@NotBlank
 	private String name;
 	
-	private Set<String> songIds;
+	private List<String> songIds;
 }

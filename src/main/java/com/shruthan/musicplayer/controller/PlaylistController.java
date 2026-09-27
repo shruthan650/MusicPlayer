@@ -78,4 +78,13 @@ public class PlaylistController {
 
         return service.removeSongFromPlaylist(songId, playlistId);
     }
+    
+    @PutMapping("/playlist/{playlistId}/song/{songId}/{position}")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+    public Playlist moveSongToDesiredPosition(
+    		@PathVariable String playlistId,
+    		@PathVariable String songId,
+    		@PathVariable int position) {
+    	return service.moveSongToDesiredPosition(playlistId, songId, position);
+    }
 }
