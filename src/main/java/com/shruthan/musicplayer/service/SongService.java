@@ -19,7 +19,9 @@ import org.jaudiotagger.tag.TagException;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -366,5 +368,18 @@ public class SongService {
 		
 		song.setPlayCount(song.getPlayCount() + 1);
 	}
+	
+	public Page<Song> getMostPlayedSongs(int page, int size) {
 
+		Pageable pageable = PageRequest.of(
+		        page,
+		        size,
+		        Sort.by(
+		                Sort.Order.desc("playCount"),
+		                Sort.Order.asc("title")
+		        )
+		);
+
+	    return songRepository.findAllByOrderByPlayCountDesc(pageable);
+	}
 }

@@ -153,4 +153,13 @@ public class SongController {
 	            contentLength
 	    );
 	}
+	
+	@GetMapping("/songs/most-played")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
+	public Page<Song> getMostPlayedSongs(
+	        @RequestParam(defaultValue = "0") int page,
+	        @RequestParam(defaultValue = "10") int size) {
+
+	    return songService.getMostPlayedSongs(page, size);
+	}
 }

@@ -18,4 +18,6 @@ public interface SongRepository extends MongoRepository<Song, String>{
 			}
 			""")
 			Page<Song> searchSongs(String query, Pageable pageable);
+	
+	Page<Song> findAllByOrderByPlayCountDesc(Pageable pageable);
 }
