@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.shruthan.musicplayer.model.Playlist;
@@ -86,5 +87,14 @@ public class PlaylistController {
     		@PathVariable String songId,
     		@PathVariable int position) {
     	return service.moveSongToDesiredPosition(playlistId, songId, position);
+    }
+    
+    @PostMapping("/playlist/{playlistId}/song/{songId}/next")
+    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+    public Playlist insertNewSongAtPosition(
+    		@PathVariable String playlistId,
+    		@PathVariable String songId,
+    		@RequestParam String currentSongId) {
+    	return service.insertNewSongAtPosition(playlistId, songId, currentSongId);
     }
 }

@@ -1,7 +1,6 @@
 package com.shruthan.musicplayer.controller;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
@@ -106,52 +105,32 @@ public class SongController {
 	    Resource resource = songService.streamSong(songId);
 
 	    if (resource == null) {
-	        return ResponseEntity
-	                .status(HttpStatus.NOT_FOUND)
-	                .build();
+	        return ResponseEntity.notFound().build();
 	    }
-	    
+
+	    // Record playback
 	    playHistoryService.addToHistory(songId);
+	    songService.songCountTracker(songId);
 
 	    long contentLength = resource.contentLength();
 
-	    String fileName = resource.getFilename().toLowerCase();
+	    MediaType mediaType = songService.getMediaType(resource);
 
-	    MediaType mediaType;
-
-	    if (fileName.endsWith(".mp3")) {
-	        mediaType = MediaType.parseMediaType("audio/mpeg");
-	    } else if (fileName.endsWith(".wav")) {
-	        mediaType = MediaType.parseMediaType("audio/wav");
-	    } else {
+	    if (mediaType == null) {
 	        return ResponseEntity
 	                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
 	                .build();
 	    }
 
+	    // Normal request
 	    if (range == null) {
-
-	        StreamingResponseBody body = outputStream -> {
-
-	            try (InputStream inputStream = resource.getInputStream()) {
-	                inputStream.transferTo(outputStream);
-	            }
-
-	        };
-
-	        return ResponseEntity
-	                .ok()
-	                .contentType(mediaType)
-	                .contentLength(contentLength)
-	                .body(body);
+	        return songService.streamFullFile(resource, mediaType, contentLength);
 	    }
 
-	    HttpRange httpRange;
+	    // Range request
+	    HttpRange httpRange = songService.parseRange(range);
 
-	    try {
-	        httpRange = HttpRange.parseRanges(range).get(0);
-	    } catch (IllegalArgumentException e) {
-
+	    if (httpRange == null) {
 	        return ResponseEntity
 	                .status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
 	                .build();
@@ -160,67 +139,18 @@ public class SongController {
 	    long start = httpRange.getRangeStart(contentLength);
 	    long end = httpRange.getRangeEnd(contentLength);
 
-	    if (start < 0 ||
-	            end < start ||
-	            start >= contentLength ||
-	            end >= contentLength) {
-
+	    if (!songService.isValidRange(start, end, contentLength)) {
 	        return ResponseEntity
 	                .status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
 	                .build();
 	    }
 
-	    long count = end - start + 1;
-
-	    StreamingResponseBody body = outputStream -> {
-
-	        try (InputStream inputStream = resource.getInputStream()) {
-
-	            long skipped = 0;
-
-	            while (skipped < start) {
-
-	                long currentSkip = inputStream.skip(start - skipped);
-
-	                if (currentSkip == 0) {
-	                    break;
-	                }
-
-	                skipped += currentSkip;
-	            }
-
-	            byte[] buffer = new byte[8192];
-
-	            long remaining = count;
-
-	            while (remaining > 0) {
-
-	                int bytesToRead =
-	                        (int) Math.min(buffer.length, remaining);
-
-	                int bytesRead =
-	                        inputStream.read(buffer, 0, bytesToRead);
-
-	                if (bytesRead == -1) {
-	                    break;
-	                }
-
-	                outputStream.write(buffer, 0, bytesRead);
-
-	                remaining -= bytesRead;
-	            }
-	        }
-	    };
-
-	    return ResponseEntity
-	            .status(HttpStatus.PARTIAL_CONTENT)
-	            .header("Accept-Ranges", "bytes")
-	            .header(
-	                    "Content-Range",
-	                    "bytes " + start + "-" + end + "/" + contentLength
-	            )
-	            .contentLength(count)
-	            .contentType(mediaType)
-	            .body(body);
+	    return songService.streamRange(
+	            resource,
+	            mediaType,
+	            start,
+	            end,
+	            contentLength
+	    );
 	}
 }

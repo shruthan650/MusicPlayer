@@ -96,6 +96,10 @@ public class PlaylistService {
 		if (playlist.getSongIds() == null) {
 			playlist.setSongIds(new ArrayList<>());
 		}
+		
+		if (playlist.getSongIds().contains(songId)) {
+			throw new InvalidInputException("Song already exists in this playlist");
+		}
 
 		playlist.getSongIds().add(songId);
 
@@ -119,7 +123,7 @@ public class PlaylistService {
 		Playlist playlist = playlistRepo.findById(playlistId)
 				.orElseThrow(() -> new ResourceNotFoundException("Playlist not found"));
 
-		Song song = songRepo.findById(songId)
+		songRepo.findById(songId)
 				.orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
 		if (position < 0 || position >= playlist.getSongIds().size()) {
@@ -138,4 +142,27 @@ public class PlaylistService {
 		return playlistRepo.save(playlist);
 	}
 
+	public Playlist insertNewSongAtPosition(String playlistId, String songId, String currentSongId) {
+		
+		Playlist playlist = playlistRepo
+				.findById(playlistId)
+				.orElseThrow(() -> new ResourceNotFoundException("Playlist Not Found"));
+		
+		songRepo.findById(songId)
+				.orElseThrow(() -> new ResourceNotFoundException("Song Not Found"));
+		
+		if (playlist.getSongIds().contains(songId)) {
+			throw new InvalidInputException("Song already present");
+		}
+		
+		int positionCurrentSong = playlist.getSongIds().indexOf(currentSongId);
+		
+		if (positionCurrentSong == -1) {
+			throw new InvalidInputException("Invalid Position");
+		}
+		
+		playlist.getSongIds().add(positionCurrentSong + 1, songId);
+		
+		return playlistRepo.save(playlist);
+	}
 }

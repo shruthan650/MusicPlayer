@@ -33,4 +33,6 @@ public class Song {
 
 	@NotBlank
 	private String filePath;
+	
+	private long playCount = 0;
 }

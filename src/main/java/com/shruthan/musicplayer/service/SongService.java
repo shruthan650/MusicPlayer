@@ -1,6 +1,8 @@
 package com.shruthan.musicplayer.service;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,8 +20,13 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpRange;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.shruthan.musicplayer.exception.InvalidInputException;
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
@@ -201,9 +208,163 @@ public class SongService {
 
 		throw new ResourceNotFoundException("Song not found");
 	}
+	
+	public MediaType getMediaType(Resource resource) {
+
+	    String fileName = resource.getFilename().toLowerCase();
+
+	    if (fileName.endsWith(".mp3")) {
+	        return MediaType.parseMediaType("audio/mpeg");
+	    }
+
+	    if (fileName.endsWith(".wav")) {
+	        return MediaType.parseMediaType("audio/wav");
+	    }
+
+	    return null;
+	}
+	
+	public ResponseEntity<StreamingResponseBody> streamFullFile(
+	        Resource resource,
+	        MediaType mediaType,
+	        long contentLength) {
+
+	    StreamingResponseBody body = outputStream -> {
+
+	        try (InputStream inputStream = resource.getInputStream()) {
+	            inputStream.transferTo(outputStream);
+	        }
+	    };
+
+	    return ResponseEntity
+	            .ok()
+	            .contentType(mediaType)
+	            .contentLength(contentLength)
+	            .body(body);
+	}
+	
+	public HttpRange parseRange(String range) {
+
+	    try {
+	        return HttpRange.parseRanges(range).get(0);
+	    } catch (IllegalArgumentException e) {
+	        return null;
+	    }
+	}
+	
+	public boolean isValidRange(
+	        long start,
+	        long end,
+	        long contentLength) {
+
+	    return start >= 0
+	            && end >= start
+	            && start < contentLength
+	            && end < contentLength;
+	}
+	
+	public ResponseEntity<StreamingResponseBody> streamRange(
+	        Resource resource,
+	        MediaType mediaType,
+	        long start,
+	        long end,
+	        long contentLength) {
+
+	    long count = end - start + 1;
+
+	    StreamingResponseBody body = outputStream -> {
+
+	        try (InputStream inputStream = resource.getInputStream()) {
+
+	            skipBytes(inputStream, start);
+
+	            streamBytes(
+	                    inputStream,
+	                    outputStream,
+	                    count
+	            );
+	        }
+	    };
+
+	    return ResponseEntity
+	            .status(HttpStatus.PARTIAL_CONTENT)
+	            .header("Accept-Ranges", "bytes")
+	            .header(
+	                    "Content-Range",
+	                    "bytes " + start + "-" + end + "/" + contentLength
+	            )
+	            .contentLength(count)
+	            .contentType(mediaType)
+	            .body(body);
+	}
+	
+	private void skipBytes(
+	        InputStream inputStream,
+	        long start)
+	        throws IOException {
+
+	    long skipped = 0;
+
+	    while (skipped < start) {
+
+	        long currentSkip =
+	                inputStream.skip(start - skipped);
+
+	        if (currentSkip == 0) {
+	            break;
+	        }
+
+	        skipped += currentSkip;
+	    }
+	}
+	
+	private void streamBytes(
+	        InputStream inputStream,
+	        OutputStream outputStream,
+	        long count)
+	        throws IOException {
+
+	    byte[] buffer = new byte[8192];
+
+	    long remaining = count;
+
+	    while (remaining > 0) {
+
+	        int bytesToRead =
+	                (int) Math.min(buffer.length, remaining);
+
+	        int bytesRead =
+	                inputStream.read(
+	                        buffer,
+	                        0,
+	                        bytesToRead
+	                );
+
+	        if (bytesRead == -1) {
+	            break;
+	        }
+
+	        outputStream.write(
+	                buffer,
+	                0,
+	                bytesRead
+	        );
+
+	        remaining -= bytesRead;
+	    }
+	}
 
 	public Page<Song> searchSongs(String query, Pageable pageable) {
 		return songRepository.searchSongs(query, pageable);
+	}
+	
+	public void songCountTracker(String songId) {
+		
+		Song song = songRepository
+		.findById(songId)
+		.orElseThrow(() -> new ResourceNotFoundException(songId));
+		
+		song.setPlayCount(song.getPlayCount() + 1);
 	}
 
 }
