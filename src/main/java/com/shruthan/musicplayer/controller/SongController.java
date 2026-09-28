@@ -162,4 +162,18 @@ public class SongController {
 
 	    return songService.getMostPlayedSongs(page, size);
 	}
+	
+	@GetMapping("/songs/most-played/genre/{genre}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
+	public Page<Song> getMostPlayedSongsByGenre(
+	        @PathVariable String genre,
+	        @RequestParam(defaultValue = "0") int page,
+	        @RequestParam(defaultValue = "10") int size) {
+
+	    return songService.getMostPlayedSongsByGenre(
+	            genre,
+	            page,
+	            size
+	    );
+	}
 }

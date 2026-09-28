@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.repository.Query;
 
 import com.shruthan.musicplayer.model.Song;
 
-public interface SongRepository extends MongoRepository<Song, String>{
+public interface SongRepository extends MongoRepository<Song, String> {
 	@Query("""
 			{
 			    '$or': [
@@ -17,7 +17,9 @@ public interface SongRepository extends MongoRepository<Song, String>{
 			    ]
 			}
 			""")
-			Page<Song> searchSongs(String query, Pageable pageable);
-	
+	Page<Song> searchSongs(String query, Pageable pageable);
+
 	Page<Song> findAllByOrderByPlayCountDesc(Pageable pageable);
+
+	Page<Song> findByGenre(String genre, Pageable pageable);
 }

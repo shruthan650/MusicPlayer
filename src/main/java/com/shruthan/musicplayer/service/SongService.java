@@ -382,4 +382,24 @@ public class SongService {
 
 	    return songRepository.findAllByOrderByPlayCountDesc(pageable);
 	}
+	
+	public Page<Song> getMostPlayedSongsByGenre(
+	        String genre,
+	        int page,
+	        int size) {
+
+	    Pageable pageable = PageRequest.of(
+	            page,
+	            size,
+	            Sort.by(
+	                    Sort.Order.desc("playCount"),
+	                    Sort.Order.asc("title")
+	            )
+	    );
+
+	    return songRepository.findByGenreOrderByPlayCountDesc(
+	            genre,
+	            pageable
+	    );
+	}
 }
