@@ -397,7 +397,7 @@ public class SongService {
 	            )
 	    );
 
-	    return songRepository.findByGenreOrderByPlayCountDesc(
+	    return songRepository.findByGenre(
 	            genre,
 	            pageable
 	    );

@@ -1,7 +1,6 @@
 package com.shruthan.musicplayer.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,10 +20,13 @@ public class PlayHistoryController {
 	}
 
 	@GetMapping("/history")
-    @PreAuthorize("isAuthenticated()")
-    public List<PlayHistory> getHistory() {
-        return playHistoryService.getHistory();
-    }
+	@PreAuthorize("isAuthenticated()")
+	public Page<PlayHistory> getHistory(
+	        @RequestParam(defaultValue = "0") int page,
+	        @RequestParam(defaultValue = "10") int size) {
+
+	    return playHistoryService.getHistory(page, size);
+	}
     
     @PostMapping("/history/{songId}")
     @PreAuthorize("isAuthenticated()")

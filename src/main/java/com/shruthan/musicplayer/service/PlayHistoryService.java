@@ -1,8 +1,10 @@
 package com.shruthan.musicplayer.service;
 
 import java.util.Date;
-import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
@@ -28,12 +30,19 @@ public class PlayHistoryService {
 		this.songRepository = songRepository;
 	}
 	
-	public List<PlayHistory> getHistory() {
+	public Page<PlayHistory> getHistory(int page, int size) {
 
 	    User user = securityService.getCurrentUser();
 
-	    return playHistoryRepository
-	            .findByUserIdOrderByPlayedAtDesc(user.getId());
+	    Pageable pageable = PageRequest.of(
+	            page,
+	            size
+	    );
+
+	    return playHistoryRepository.findByUserIdOrderByPlayedAtDesc(
+	            user.getId(),
+	            pageable
+	    );
 	}
 
 	public void addToHistory(String songId) {
