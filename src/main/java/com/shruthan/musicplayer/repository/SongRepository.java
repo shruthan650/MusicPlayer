@@ -22,4 +22,6 @@ public interface SongRepository extends MongoRepository<Song, String> {
 	Page<Song> findAllByOrderByPlayCountDesc(Pageable pageable);
 
 	Page<Song> findByGenre(String genre, Pageable pageable);
+	
+	void deleteByOwnerId(String ownerId);
 }

@@ -1,5 +1,7 @@
 package com.shruthan.musicplayer.service;
 
+import java.util.List;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -9,9 +11,11 @@ import org.springframework.stereotype.Service;
 import com.shruthan.musicplayer.dto.LoginResponse;
 import com.shruthan.musicplayer.dto.UserResponse;
 import com.shruthan.musicplayer.exception.InvalidInputException;
+import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Role;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.PlayHistoryRepository;
+import com.shruthan.musicplayer.repository.PlaylistRepository;
 import com.shruthan.musicplayer.repository.SongRepository;
 import com.shruthan.musicplayer.repository.UserRepository;
 import com.shruthan.musicplayer.security.CustomUserDetails;
@@ -24,6 +28,8 @@ public class UserService implements UserDetailsService {
 	private final PasswordEncoder passwordEncoder;
 	private final SecurityService securityService;
 	private final JWTService jwtService;
+	private final PlaylistRepository playlistRepository;
+	private final PlayHistoryRepository playHistoryRepository;
 
 	public UserService(
 			UserRepository userRepository, 
@@ -31,13 +37,16 @@ public class UserService implements UserDetailsService {
 			SecurityService securityService,
 			JWTService jwtService, 
 			SongRepository songRepository, 
-			PlayHistoryRepository playHistoryRepository
+			PlayHistoryRepository playHistoryRepository,
+			PlaylistRepository playlistRepository
 			) {
 
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.securityService = securityService;
 		this.jwtService = jwtService;
+		this.playlistRepository = playlistRepository;
+		this.playHistoryRepository = playHistoryRepository;
 	}
 
 	public User loadUserByEmail(String userEmail) {
@@ -114,5 +123,34 @@ public class UserService implements UserDetailsService {
 	    user.setPassword(passwordEncoder.encode(newPassword));
 
 	    userRepository.save(user);
+	}
+	
+	public List<UserResponse> getAllUsers() {
+	    return userRepository.findAll()
+	            .stream()
+	            .map(user -> new UserResponse(
+	                    user.getId(),
+	                    user.getUserEmail(),
+	                    user.getRole()
+	            ))
+	            .toList();
+	}
+	
+	public void deleteUser(String userId) {
+
+	    User currentUser = securityService.getCurrentUser();
+
+	    if (currentUser.getId().equals(userId)) {
+	        throw new InvalidInputException("Admin cannot delete their own account");
+	    }
+
+	    User user = userRepository.findById(userId)
+	            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+	    playlistRepository.deleteByOwnerId(user.getId());
+
+	    playHistoryRepository.deleteByUserId(user.getId());
+
+	    userRepository.delete(user);
 	}
 }

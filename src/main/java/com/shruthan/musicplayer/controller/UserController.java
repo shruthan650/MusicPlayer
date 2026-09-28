@@ -1,7 +1,11 @@
 package com.shruthan.musicplayer.controller;
 
+import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,6 +26,18 @@ public class UserController {
     public UserController(
     		UserService userService) {
         this.userService = userService;
+    }
+    
+    @GetMapping("/admin/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<UserResponse> getAllUsers() {
+        return userService.getAllUsers();
+    }
+    
+    @DeleteMapping("/admin/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteUser(@PathVariable String userId) {
+        userService.deleteUser(userId);
     }
 
     @GetMapping("/me")

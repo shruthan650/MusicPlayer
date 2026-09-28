@@ -11,5 +11,7 @@ public interface PlaylistRepository extends MongoRepository<Playlist, String> {
 
     List<Playlist> findBySongIdsContaining(String songId);
 
-    List<Playlist> findByOwnerId(String ownerId);
+    List<Playlist> deleteByOwnerId(String ownerId);
+
+	List<Playlist> findByOwnerId(String id);
 }
