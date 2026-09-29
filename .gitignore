@@ -1,8 +1,28 @@
-*
-!README.md
-!.gitignore
-!.pom.xml
-!src/
-!src/main
-!src/main/java
-!src/main/java/**
+# Maven
+target/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Java compiled files
+*.class
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Music files
+songs/
+
+# Logs
+logs/
+*.log
