@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
@@ -124,6 +125,15 @@ public class SongService {
 			for (User user : users) {
 			    user.getLikedSongIds().remove(songId);
 			    userRepository.save(user);
+			}
+			
+			if (song.getCoverImagePath() != null) {
+
+			    Path coverPath = Paths.get(song.getCoverImagePath());
+
+			    if (Files.exists(coverPath)) {
+			        Files.delete(coverPath);
+			    }
 			}
 			
 		} else {
@@ -401,5 +411,78 @@ public class SongService {
 	            genre,
 	            pageable
 	    );
+	}
+	
+	public Song uploadCover(String songId, MultipartFile coverFile) throws IOException {
+
+	    Song song = songRepository.findById(songId)
+	            .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+	    String originalFilename = coverFile.getOriginalFilename();
+
+	    if (originalFilename == null) {
+	        throw new InvalidInputException("Invalid file");
+	    }
+
+	    String extension = "";
+
+	    if (originalFilename.toLowerCase().endsWith(".jpg")) {
+	        extension = ".jpg";
+	    } else if (originalFilename.toLowerCase().endsWith(".jpeg")) {
+	        extension = ".jpeg";
+	    } else if (originalFilename.toLowerCase().endsWith(".png")) {
+	        extension = ".png";
+	    } else {
+	        throw new InvalidInputException(
+	                "Only JPG, JPEG and PNG images are allowed"
+	        );
+	    }
+
+	    Path coverDirectory = Paths.get("covers");
+
+	    if (!Files.exists(coverDirectory)) {
+	        Files.createDirectories(coverDirectory);
+	    }
+
+	    String fileName = UUID.randomUUID() + extension;
+
+	    Path newCoverPath = coverDirectory.resolve(fileName);
+
+	    Files.copy(
+	            coverFile.getInputStream(),
+	            newCoverPath,
+	            StandardCopyOption.REPLACE_EXISTING
+	    );
+	    
+	    
+	    if (song.getCoverImagePath() != null) {
+	        Path oldCoverPath = Paths.get(song.getCoverImagePath());
+
+	        if (Files.exists(oldCoverPath)) {
+	            Files.delete(oldCoverPath);
+	        }
+	    }
+
+	    song.setCoverImagePath(newCoverPath.toString());
+
+	    return songRepository.save(song);
+	}
+	
+	public Resource getCoverImage(String songId) {
+
+	    Song song = songRepository.findById(songId)
+	            .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+	    if (song.getCoverImagePath() == null) {
+	        throw new ResourceNotFoundException("Cover image not found");
+	    }
+
+	    Resource resource = new FileSystemResource(song.getCoverImagePath());
+
+	    if (!resource.exists()) {
+	        throw new ResourceNotFoundException("Cover image file not found");
+	    }
+
+	    return resource;
 	}
 }

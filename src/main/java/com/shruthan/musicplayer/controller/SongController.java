@@ -6,6 +6,7 @@ import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
 import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
 import org.jaudiotagger.tag.TagException;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Song;
+import com.shruthan.musicplayer.repository.SongRepository;
 import com.shruthan.musicplayer.service.PlayHistoryService;
 import com.shruthan.musicplayer.service.SongService;
 
@@ -40,10 +43,15 @@ public class SongController {
 
 	private final SongService songService;
 	private final PlayHistoryService playHistoryService;
+	private final SongRepository songRepository;
 
-	public SongController(SongService service, PlayHistoryService playHistoryService) {
+	public SongController(
+			SongService service,
+			PlayHistoryService playHistoryService,
+			SongRepository songRepository) {
 		this.songService = service;
 		this.playHistoryService = playHistoryService;
+		this.songRepository = songRepository;
 	}
 
 	@GetMapping("/songs")
@@ -81,9 +89,36 @@ public class SongController {
 	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
 	public void uploadSong(@RequestParam("songFile") MultipartFile songFile, @PathVariable String songId)
 			throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
-//		return "File Details {Name : " + songFile.getName() + "\n Size : " + songFile.getSize() + "\n Type : " + songFile.getContentType() + "}";
 
 		songService.uploadSong(songFile, songId);
+	}
+	
+	@PostMapping("/song/{songId}/cover")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
+	public Song uploadCover(
+	        @PathVariable String songId,
+	        @RequestParam("coverFile") MultipartFile coverFile)
+	        throws IOException {
+
+	    return songService.uploadCover(songId, coverFile);
+	}
+	
+	public Resource getCoverImage(String songId) {
+
+	    Song song = songRepository.findById(songId)
+	            .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+
+	    if (song.getCoverImagePath() == null) {
+	        throw new ResourceNotFoundException("Cover image not found");
+	    }
+
+	    Resource resource = new FileSystemResource(song.getCoverImagePath());
+
+	    if (!resource.exists()) {
+	        throw new ResourceNotFoundException("Cover image file not found");
+	    }
+
+	    return resource;
 	}
 
 	@GetMapping("/songs/search")
