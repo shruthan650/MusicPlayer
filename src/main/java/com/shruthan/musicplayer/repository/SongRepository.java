@@ -28,4 +28,6 @@ public interface SongRepository extends MongoRepository<Song, String> {
 	void deleteByOwnerId(String ownerId);
 	
 	List<Song> findByOwnerId(String ownerId);
+	
+	List<Song> findByGenreInOrderByPlayCountDesc(List<String> genres);
 }

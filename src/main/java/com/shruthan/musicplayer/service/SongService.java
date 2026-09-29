@@ -9,6 +9,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jaudiotagger.audio.AudioFile;
@@ -51,15 +53,17 @@ public class SongService {
 	private final UserRepository userRepository;
 	private final SecurityService securityService;
 	private final PlayHistoryRepository playHistoryRepository;
+	private final LikeService likeService;
 
 	SongService(SongRepository repository, PlaylistRepository playlistRepository, UserRepository userRepository,
-			SecurityService securityService, PlayHistoryRepository playHistoryRepository) {
+			SecurityService securityService, PlayHistoryRepository playHistoryRepository, LikeService likeService) {
 
 		this.songRepository = repository;
 		this.playlistRepository = playlistRepository;
 		this.securityService = securityService;
 		this.userRepository = userRepository;
 		this.playHistoryRepository = playHistoryRepository;
+		this.likeService = likeService;
 	}
 
 	public org.springframework.data.domain.Page<Song> getAllSongs(org.springframework.data.domain.Pageable pageable) {
@@ -113,31 +117,30 @@ public class SongService {
 
 			songRepository.deleteById(songId);
 			playHistoryRepository.deleteBySongId(songId);
-			
-			
+
 			List<Playlist> playlistsContainingSongId = playlistRepository.findBySongIdsContaining(songId);
 
 			for (Playlist playlist : playlistsContainingSongId) {
 				playlist.getSongIds().remove(songId);
 				playlistRepository.save(playlist);
 			}
-			
+
 			List<User> users = userRepository.findByLikedSongIdsContaining(songId);
 
 			for (User user : users) {
-			    user.getLikedSongIds().remove(songId);
-			    userRepository.save(user);
+				user.getLikedSongIds().remove(songId);
+				userRepository.save(user);
 			}
-			
+
 			if (song.getCoverImagePath() != null) {
 
-			    Path coverPath = Paths.get(song.getCoverImagePath());
+				Path coverPath = Paths.get(song.getCoverImagePath());
 
-			    if (Files.exists(coverPath)) {
-			        Files.delete(coverPath);
-			    }
+				if (Files.exists(coverPath)) {
+					Files.delete(coverPath);
+				}
 			}
-			
+
 		} else {
 			throw new ResourceNotFoundException("Song not found");
 		}
@@ -222,301 +225,242 @@ public class SongService {
 
 		throw new ResourceNotFoundException("Song not found");
 	}
-	
+
 	public MediaType getMediaType(Resource resource) {
 
-	    String fileName = resource.getFilename().toLowerCase();
+		String fileName = resource.getFilename().toLowerCase();
 
-	    if (fileName.endsWith(".mp3")) {
-	        return MediaType.parseMediaType("audio/mpeg");
-	    }
+		if (fileName.endsWith(".mp3")) {
+			return MediaType.parseMediaType("audio/mpeg");
+		}
 
-	    if (fileName.endsWith(".wav")) {
-	        return MediaType.parseMediaType("audio/wav");
-	    }
+		if (fileName.endsWith(".wav")) {
+			return MediaType.parseMediaType("audio/wav");
+		}
 
-	    return null;
+		return null;
 	}
-	
-	public ResponseEntity<StreamingResponseBody> streamFullFile(
-	        Resource resource,
-	        MediaType mediaType,
-	        long contentLength) {
 
-	    StreamingResponseBody body = outputStream -> {
+	public ResponseEntity<StreamingResponseBody> streamFullFile(Resource resource, MediaType mediaType,
+			long contentLength) {
 
-	        try (InputStream inputStream = resource.getInputStream()) {
-	            inputStream.transferTo(outputStream);
-	        }
-	    };
+		StreamingResponseBody body = outputStream -> {
 
-	    return ResponseEntity
-	            .ok()
-	            .contentType(mediaType)
-	            .contentLength(contentLength)
-	            .body(body);
+			try (InputStream inputStream = resource.getInputStream()) {
+				inputStream.transferTo(outputStream);
+			}
+		};
+
+		return ResponseEntity.ok().contentType(mediaType).contentLength(contentLength).body(body);
 	}
-	
+
 	public HttpRange parseRange(String range) {
 
-	    try {
-	        return HttpRange.parseRanges(range).get(0);
-	    } catch (IllegalArgumentException e) {
-	        return null;
-	    }
+		try {
+			return HttpRange.parseRanges(range).get(0);
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
 	}
-	
-	public boolean isValidRange(
-	        long start,
-	        long end,
-	        long contentLength) {
 
-	    return start >= 0
-	            && end >= start
-	            && start < contentLength
-	            && end < contentLength;
+	public boolean isValidRange(long start, long end, long contentLength) {
+
+		return start >= 0 && end >= start && start < contentLength && end < contentLength;
 	}
-	
-	public ResponseEntity<StreamingResponseBody> streamRange(
-	        Resource resource,
-	        MediaType mediaType,
-	        long start,
-	        long end,
-	        long contentLength) {
 
-	    long count = end - start + 1;
+	public ResponseEntity<StreamingResponseBody> streamRange(Resource resource, MediaType mediaType, long start,
+			long end, long contentLength) {
 
-	    StreamingResponseBody body = outputStream -> {
+		long count = end - start + 1;
 
-	        try (InputStream inputStream = resource.getInputStream()) {
+		StreamingResponseBody body = outputStream -> {
 
-	            skipBytes(inputStream, start);
+			try (InputStream inputStream = resource.getInputStream()) {
 
-	            streamBytes(
-	                    inputStream,
-	                    outputStream,
-	                    count
-	            );
-	        }
-	    };
+				skipBytes(inputStream, start);
 
-	    return ResponseEntity
-	            .status(HttpStatus.PARTIAL_CONTENT)
-	            .header("Accept-Ranges", "bytes")
-	            .header(
-	                    "Content-Range",
-	                    "bytes " + start + "-" + end + "/" + contentLength
-	            )
-	            .contentLength(count)
-	            .contentType(mediaType)
-	            .body(body);
+				streamBytes(inputStream, outputStream, count);
+			}
+		};
+
+		return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).header("Accept-Ranges", "bytes")
+				.header("Content-Range", "bytes " + start + "-" + end + "/" + contentLength).contentLength(count)
+				.contentType(mediaType).body(body);
 	}
-	
-	private void skipBytes(
-	        InputStream inputStream,
-	        long start)
-	        throws IOException {
 
-	    long skipped = 0;
+	private void skipBytes(InputStream inputStream, long start) throws IOException {
 
-	    while (skipped < start) {
+		long skipped = 0;
 
-	        long currentSkip =
-	                inputStream.skip(start - skipped);
+		while (skipped < start) {
 
-	        if (currentSkip == 0) {
-	            break;
-	        }
+			long currentSkip = inputStream.skip(start - skipped);
 
-	        skipped += currentSkip;
-	    }
+			if (currentSkip == 0) {
+				break;
+			}
+
+			skipped += currentSkip;
+		}
 	}
-	
-	private void streamBytes(
-	        InputStream inputStream,
-	        OutputStream outputStream,
-	        long count)
-	        throws IOException {
 
-	    byte[] buffer = new byte[8192];
+	private void streamBytes(InputStream inputStream, OutputStream outputStream, long count) throws IOException {
 
-	    long remaining = count;
+		byte[] buffer = new byte[8192];
 
-	    while (remaining > 0) {
+		long remaining = count;
 
-	        int bytesToRead =
-	                (int) Math.min(buffer.length, remaining);
+		while (remaining > 0) {
 
-	        int bytesRead =
-	                inputStream.read(
-	                        buffer,
-	                        0,
-	                        bytesToRead
-	                );
+			int bytesToRead = (int) Math.min(buffer.length, remaining);
 
-	        if (bytesRead == -1) {
-	            break;
-	        }
+			int bytesRead = inputStream.read(buffer, 0, bytesToRead);
 
-	        outputStream.write(
-	                buffer,
-	                0,
-	                bytesRead
-	        );
+			if (bytesRead == -1) {
+				break;
+			}
 
-	        remaining -= bytesRead;
-	    }
+			outputStream.write(buffer, 0, bytesRead);
+
+			remaining -= bytesRead;
+		}
 	}
 
 	public Page<Song> searchSongs(String query, Pageable pageable) {
 		return songRepository.searchSongs(query, pageable);
 	}
-	
+
 	public void songCountTracker(String songId) {
-		
-		Song song = songRepository
-		.findById(songId)
-		.orElseThrow(() -> new ResourceNotFoundException(songId));
-		
+
+		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException(songId));
+
 		song.setPlayCount(song.getPlayCount() + 1);
 	}
-	
+
 	public Page<Song> getMostPlayedSongs(int page, int size) {
 
-		Pageable pageable = PageRequest.of(
-		        page,
-		        size,
-		        Sort.by(
-		                Sort.Order.desc("playCount"),
-		                Sort.Order.asc("title")
-		        )
-		);
+		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("playCount"), Sort.Order.asc("title")));
 
-	    return songRepository.findAllByOrderByPlayCountDesc(pageable);
+		return songRepository.findAllByOrderByPlayCountDesc(pageable);
 	}
-	
-	public Page<Song> getMostPlayedSongsByGenre(
-	        String genre,
-	        int page,
-	        int size) {
 
-	    Pageable pageable = PageRequest.of(
-	            page,
-	            size,
-	            Sort.by(
-	                    Sort.Order.desc("playCount"),
-	                    Sort.Order.asc("title")
-	            )
-	    );
+	public Page<Song> getMostPlayedSongsByGenre(String genre, int page, int size) {
 
-	    return songRepository.findByGenre(
-	            genre,
-	            pageable
-	    );
+		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("playCount"), Sort.Order.asc("title")));
+
+		return songRepository.findByGenre(genre, pageable);
 	}
-	
+
 	public Song uploadCover(String songId, MultipartFile coverFile) throws IOException {
 
-	    Song song = songRepository.findById(songId)
-	            .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
-	    String originalFilename = coverFile.getOriginalFilename();
+		String originalFilename = coverFile.getOriginalFilename();
 
-	    if (originalFilename == null) {
-	        throw new InvalidInputException("Invalid file");
-	    }
+		if (originalFilename == null) {
+			throw new InvalidInputException("Invalid file");
+		}
 
-	    String extension = "";
+		String extension = "";
 
-	    if (originalFilename.toLowerCase().endsWith(".jpg")) {
-	        extension = ".jpg";
-	    } else if (originalFilename.toLowerCase().endsWith(".jpeg")) {
-	        extension = ".jpeg";
-	    } else if (originalFilename.toLowerCase().endsWith(".png")) {
-	        extension = ".png";
-	    } else {
-	        throw new InvalidInputException(
-	                "Only JPG, JPEG and PNG images are allowed"
-	        );
-	    }
+		if (originalFilename.toLowerCase().endsWith(".jpg")) {
+			extension = ".jpg";
+		} else if (originalFilename.toLowerCase().endsWith(".jpeg")) {
+			extension = ".jpeg";
+		} else if (originalFilename.toLowerCase().endsWith(".png")) {
+			extension = ".png";
+		} else {
+			throw new InvalidInputException("Only JPG, JPEG and PNG images are allowed");
+		}
 
-	    Path coverDirectory = Paths.get("covers");
+		Path coverDirectory = Paths.get("covers");
 
-	    if (!Files.exists(coverDirectory)) {
-	        Files.createDirectories(coverDirectory);
-	    }
+		if (!Files.exists(coverDirectory)) {
+			Files.createDirectories(coverDirectory);
+		}
 
-	    String fileName = UUID.randomUUID() + extension;
+		String fileName = UUID.randomUUID() + extension;
 
-	    Path newCoverPath = coverDirectory.resolve(fileName);
+		Path newCoverPath = coverDirectory.resolve(fileName);
 
-	    Files.copy(
-	            coverFile.getInputStream(),
-	            newCoverPath,
-	            StandardCopyOption.REPLACE_EXISTING
-	    );
-	    
-	    
-	    if (song.getCoverImagePath() != null) {
-	        Path oldCoverPath = Paths.get(song.getCoverImagePath());
+		Files.copy(coverFile.getInputStream(), newCoverPath, StandardCopyOption.REPLACE_EXISTING);
 
-	        if (Files.exists(oldCoverPath)) {
-	            Files.delete(oldCoverPath);
-	        }
-	    }
+		if (song.getCoverImagePath() != null) {
+			Path oldCoverPath = Paths.get(song.getCoverImagePath());
 
-	    song.setCoverImagePath(newCoverPath.toString());
+			if (Files.exists(oldCoverPath)) {
+				Files.delete(oldCoverPath);
+			}
+		}
 
-	    return songRepository.save(song);
+		song.setCoverImagePath(newCoverPath.toString());
+
+		return songRepository.save(song);
 	}
-	
+
 	public Resource getCoverImage(String songId) {
 
-	    Song song = songRepository.findById(songId)
-	            .orElseThrow(() -> new ResourceNotFoundException("Song not found"));
+		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
-	    if (song.getCoverImagePath() == null) {
-	        throw new ResourceNotFoundException("Cover image not found");
-	    }
+		if (song.getCoverImagePath() == null) {
+			throw new ResourceNotFoundException("Cover image not found");
+		}
 
-	    Resource resource = new FileSystemResource(song.getCoverImagePath());
+		Resource resource = new FileSystemResource(song.getCoverImagePath());
 
-	    if (!resource.exists()) {
-	        throw new ResourceNotFoundException("Cover image file not found");
-	    }
+		if (!resource.exists()) {
+			throw new ResourceNotFoundException("Cover image file not found");
+		}
 
-	    return resource;
+		return resource;
 	}
-	
+
 	public ArtistStatistics getArtistStatistics() {
 
-	    User artist = securityService.getCurrentUser();
+		User artist = securityService.getCurrentUser();
 
-	    List<Song> songs = songRepository.findByOwnerId(artist.getId());
+		List<Song> songs = songRepository.findByOwnerId(artist.getId());
 
-	    long totalSongs = songs.size();
+		long totalSongs = songs.size();
 
-	    long totalPlays = songs.stream()
-	            .mapToLong(Song::getPlayCount)
-	            .sum();
+		long totalPlays = songs.stream().mapToLong(Song::getPlayCount).sum();
 
-	    Song mostPlayed = songs.stream()
-	            .max(Comparator.comparingLong(Song::getPlayCount))
-	            .orElse(null);
+		Song mostPlayed = songs.stream().max(Comparator.comparingLong(Song::getPlayCount)).orElse(null);
 
-	    String mostPlayedSong = null;
-	    long mostPlayedCount = 0;
+		String mostPlayedSong = null;
+		long mostPlayedCount = 0;
 
-	    if (mostPlayed != null) {
-	        mostPlayedSong = mostPlayed.getTitle();
-	        mostPlayedCount = mostPlayed.getPlayCount();
-	    }
+		if (mostPlayed != null) {
+			mostPlayedSong = mostPlayed.getTitle();
+			mostPlayedCount = mostPlayed.getPlayCount();
+		}
 
-	    return new ArtistStatistics(
-	            totalSongs,
-	            totalPlays,
-	            mostPlayedSong,
-	            mostPlayedCount
-	    );
+		return new ArtistStatistics(totalSongs, totalPlays, mostPlayedSong, mostPlayedCount);
+	}
+
+	public List<Song> getRecommendations() {
+
+		User user = securityService.getCurrentUser();
+		Set<String> likedSongs = user.getLikedSongIds();
+
+		List<String> genres = likedSongs
+				.stream()
+				.map(songRepository::findById)
+				.flatMap(Optional::stream)
+				.map(Song::getGenre)
+				.distinct()
+				.toList();
+
+		if (genres.isEmpty()) {
+			return List.of();
+		}
+
+		List<Song> recommendations = songRepository.findByGenreInOrderByPlayCountDesc(genres);
+
+		return recommendations
+				.stream()
+				.filter(song -> !likedSongs.contains(song.getId()))
+				.limit(10)
+				.toList();
 	}
 }
