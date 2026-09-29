@@ -1,6 +1,7 @@
 *
 !README.md
 !.gitignore
+!.pom.xml
 !src/
 !src/main
 !src/main/java
