@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import com.shruthan.musicplayer.dto.ArtistStatistics;
 import com.shruthan.musicplayer.exception.InvalidInputException;
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Playlist;
@@ -484,5 +486,37 @@ public class SongService {
 	    }
 
 	    return resource;
+	}
+	
+	public ArtistStatistics getArtistStatistics() {
+
+	    User artist = securityService.getCurrentUser();
+
+	    List<Song> songs = songRepository.findByOwnerId(artist.getId());
+
+	    long totalSongs = songs.size();
+
+	    long totalPlays = songs.stream()
+	            .mapToLong(Song::getPlayCount)
+	            .sum();
+
+	    Song mostPlayed = songs.stream()
+	            .max(Comparator.comparingLong(Song::getPlayCount))
+	            .orElse(null);
+
+	    String mostPlayedSong = null;
+	    long mostPlayedCount = 0;
+
+	    if (mostPlayed != null) {
+	        mostPlayedSong = mostPlayed.getTitle();
+	        mostPlayedCount = mostPlayed.getPlayCount();
+	    }
+
+	    return new ArtistStatistics(
+	            totalSongs,
+	            totalPlays,
+	            mostPlayedSong,
+	            mostPlayedCount
+	    );
 	}
 }
