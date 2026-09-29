@@ -53,17 +53,19 @@ public class SongService {
 	private final UserRepository userRepository;
 	private final SecurityService securityService;
 	private final PlayHistoryRepository playHistoryRepository;
-	private final LikeService likeService;
 
-	SongService(SongRepository repository, PlaylistRepository playlistRepository, UserRepository userRepository,
-			SecurityService securityService, PlayHistoryRepository playHistoryRepository, LikeService likeService) {
+	SongService(
+			SongRepository repository,
+			PlaylistRepository playlistRepository,
+			UserRepository userRepository,
+			SecurityService securityService,
+			PlayHistoryRepository playHistoryRepository) {
 
 		this.songRepository = repository;
 		this.playlistRepository = playlistRepository;
 		this.securityService = securityService;
 		this.userRepository = userRepository;
 		this.playHistoryRepository = playHistoryRepository;
-		this.likeService = likeService;
 	}
 
 	public org.springframework.data.domain.Page<Song> getAllSongs(org.springframework.data.domain.Pageable pageable) {
@@ -100,7 +102,7 @@ public class SongService {
 			songInRepo.setDuration(song.getDuration());
 			songInRepo.setGenre(song.getGenre());
 			songInRepo.setTitle(song.getTitle());
-			songRepository.save(song);
+			songRepository.save(songInRepo);
 
 		} else {
 			throw new ResourceNotFoundException("Song not found");
@@ -335,6 +337,8 @@ public class SongService {
 		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException(songId));
 
 		song.setPlayCount(song.getPlayCount() + 1);
+		
+		songRepository.save(song);
 	}
 
 	public Page<Song> getMostPlayedSongs(int page, int size) {

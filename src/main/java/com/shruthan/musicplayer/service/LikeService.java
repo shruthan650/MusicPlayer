@@ -4,23 +4,22 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.SongRepository;
 import com.shruthan.musicplayer.repository.UserRepository;
 
+@Service
 public class LikeService {
-	
+
 	private final SecurityService securityService;
 	private final SongRepository songRepository;
 	private final UserRepository userRepository;
-	
-	public LikeService(
-			SecurityService securityService,
-			SongRepository songRepository,
-			UserRepository userRepository
-			) {
+
+	public LikeService(SecurityService securityService, SongRepository songRepository, UserRepository userRepository) {
 		this.securityService = securityService;
 		this.songRepository = songRepository;
 		this.userRepository = userRepository;
@@ -28,48 +27,47 @@ public class LikeService {
 
 	public void likeSong(String songId) {
 
-	    User user = securityService.getCurrentUser();
+		User user = securityService.getCurrentUser();
 
-	    songRepository.findById(songId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Song not found"));
+		songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
-	    if (user.getLikedSongIds() == null) {
-	        user.setLikedSongIds(new HashSet<>());
-	    }
+		if (user.getLikedSongIds() == null) {
+			user.setLikedSongIds(new HashSet<>());
+		}
 
-	    user.getLikedSongIds().add(songId);
+		user.getLikedSongIds().add(songId);
 
-	    userRepository.save(user);
+		userRepository.save(user);
 	}
 
 	public void unlikeSong(String songId) {
 
-	    User user = securityService.getCurrentUser();
+		User user = securityService.getCurrentUser();
 
-	    if (user.getLikedSongIds() != null) {
-	        user.getLikedSongIds().remove(songId);
-	    }
+		songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
 
-	    userRepository.save(user);
+		if (user.getLikedSongIds() != null) {
+			user.getLikedSongIds().remove(songId);
+		}
+
+		userRepository.save(user);
 	}
-	
+
 	public List<Song> getLikedSongs() {
 
-	    User user = securityService.getCurrentUser();
+		User user = securityService.getCurrentUser();
 
-	    List<Song> songs = new ArrayList<>();
+		List<Song> songs = new ArrayList<>();
 
-	    if (user.getLikedSongIds() == null) {
-	        return songs;
-	    }
+		if (user.getLikedSongIds() == null) {
+			return songs;
+		}
 
-	    for (String songId : user.getLikedSongIds()) {
+		for (String songId : user.getLikedSongIds()) {
 
-	        songRepository.findById(songId)
-	                .ifPresent(songs::add);
-	    }
+			songRepository.findById(songId).ifPresent(songs::add);
+		}
 
-	    return songs;
+		return songs;
 	}
 }

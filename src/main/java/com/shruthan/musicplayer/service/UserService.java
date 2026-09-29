@@ -1,5 +1,6 @@
 package com.shruthan.musicplayer.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +14,7 @@ import com.shruthan.musicplayer.dto.UserResponse;
 import com.shruthan.musicplayer.exception.InvalidInputException;
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Role;
+import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.PlayHistoryRepository;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
@@ -30,6 +32,8 @@ public class UserService implements UserDetailsService {
 	private final JWTService jwtService;
 	private final PlaylistRepository playlistRepository;
 	private final PlayHistoryRepository playHistoryRepository;
+	private final SongRepository songRepository;
+	private final SongService songService;
 
 	public UserService(
 			UserRepository userRepository, 
@@ -38,7 +42,8 @@ public class UserService implements UserDetailsService {
 			JWTService jwtService, 
 			SongRepository songRepository, 
 			PlayHistoryRepository playHistoryRepository,
-			PlaylistRepository playlistRepository
+			PlaylistRepository playlistRepository,
+			SongService songService
 			) {
 
 		this.userRepository = userRepository;
@@ -47,6 +52,8 @@ public class UserService implements UserDetailsService {
 		this.jwtService = jwtService;
 		this.playlistRepository = playlistRepository;
 		this.playHistoryRepository = playHistoryRepository;
+		this.songRepository = songRepository;
+		this.songService = songService;
 	}
 
 	public User loadUserByEmail(String userEmail) {
@@ -136,7 +143,7 @@ public class UserService implements UserDetailsService {
 	            .toList();
 	}
 	
-	public void deleteUser(String userId) {
+	public void deleteUser(String userId) throws IOException {
 
 	    User currentUser = securityService.getCurrentUser();
 
@@ -149,8 +156,16 @@ public class UserService implements UserDetailsService {
 
 	    playlistRepository.deleteByOwnerId(user.getId());
 
-	    playHistoryRepository.deleteByUserId(user.getId());
+	    if (user.getRole() == Role.ARTIST) {
 
+	        List<Song> songs = songRepository.findByOwnerId(user.getId());
+
+	        for (Song song : songs) {
+	            songService.deleteSongById(song.getId());
+	        }
+	    }
+	    
+	    playHistoryRepository.deleteByUserId(user.getId());
 	    userRepository.delete(user);
 	}
 }
