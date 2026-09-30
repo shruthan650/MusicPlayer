@@ -1,15 +1,17 @@
 package com.shruthan.musicplayer.repository;
 
-import java.util.List;
-
+import com.shruthan.musicplayer.model.Song;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
 
-import com.shruthan.musicplayer.model.Song;
+import java.util.List;
 
+@Repository
 public interface SongRepository extends MongoRepository<Song, String> {
+
 	@Query("""
 			{
 			    '$or': [
@@ -21,13 +23,13 @@ public interface SongRepository extends MongoRepository<Song, String> {
 			""")
 	Page<Song> searchSongs(String query, Pageable pageable);
 
-	Page<Song> findAllByOrderByPlayCountDesc(Pageable pageable);
-
 	Page<Song> findByGenre(String genre, Pageable pageable);
-	
-	void deleteByOwnerId(String ownerId);
-	
+
 	List<Song> findByOwnerId(String ownerId);
-	
+
+	void deleteByOwnerId(String ownerId);
+
 	List<Song> findByGenreInOrderByPlayCountDesc(List<String> genres);
+
+	Page<Song> findAllByOrderByPlayCountDesc(Pageable pageable);
 }

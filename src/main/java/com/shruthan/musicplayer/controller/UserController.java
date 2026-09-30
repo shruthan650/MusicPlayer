@@ -1,5 +1,6 @@
 package com.shruthan.musicplayer.controller;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,7 +37,7 @@ public class UserController {
     
     @DeleteMapping("/admin/users/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public void deleteUser(@PathVariable String userId) {
+    public void deleteUser(@PathVariable String userId) throws IOException {
         userService.deleteUser(userId);
     }
 

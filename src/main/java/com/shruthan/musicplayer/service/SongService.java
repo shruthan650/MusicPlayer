@@ -1,457 +1,210 @@
 package com.shruthan.musicplayer.service;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import org.jaudiotagger.audio.AudioFile;
-import org.jaudiotagger.audio.AudioFileIO;
-import org.jaudiotagger.audio.AudioHeader;
-import org.jaudiotagger.audio.exceptions.CannotReadException;
-import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
-import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
-import org.jaudiotagger.tag.TagException;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-
 import com.shruthan.musicplayer.dto.ArtistStatistics;
 import com.shruthan.musicplayer.exception.InvalidInputException;
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
-import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.PlayHistoryRepository;
 import com.shruthan.musicplayer.repository.PlaylistRepository;
 import com.shruthan.musicplayer.repository.SongRepository;
 import com.shruthan.musicplayer.repository.UserRepository;
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.AudioHeader;
+import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.util.*;
 
 @Service
 public class SongService {
 
+	private static final Set<String> ALLOWED_AUDIO_EXTENSIONS = Set.of("mp3", "wav");
+	private static final Set<String> ALLOWED_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png");
+
 	private final SongRepository songRepository;
 	private final PlaylistRepository playlistRepository;
 	private final UserRepository userRepository;
-	private final SecurityService securityService;
 	private final PlayHistoryRepository playHistoryRepository;
+	private final SecurityService securityService;
+	private final StorageService storageService;
 
-	SongService(
-			SongRepository repository,
+	public SongService(
+			SongRepository songRepository,
 			PlaylistRepository playlistRepository,
 			UserRepository userRepository,
+			PlayHistoryRepository playHistoryRepository,
 			SecurityService securityService,
-			PlayHistoryRepository playHistoryRepository) {
-
-		this.songRepository = repository;
+			StorageService storageService) {
+		this.songRepository = songRepository;
 		this.playlistRepository = playlistRepository;
-		this.securityService = securityService;
 		this.userRepository = userRepository;
 		this.playHistoryRepository = playHistoryRepository;
+		this.securityService = securityService;
+		this.storageService = storageService;
 	}
 
-	public org.springframework.data.domain.Page<Song> getAllSongs(org.springframework.data.domain.Pageable pageable) {
-
+	@Transactional(readOnly = true)
+	public Page<Song> getAllSongs(Pageable pageable) {
 		return songRepository.findAll(pageable);
 	}
 
+	@Transactional
 	public Song addSong(Song song) {
-
 		User user = securityService.getCurrentUser();
 		song.setOwnerId(user.getId());
-
 		return songRepository.save(song);
 	}
 
+	@Transactional(readOnly = true)
 	public Song getSongById(String songId) {
-		Song song = songRepository.findById(songId).orElse(null);
-
-		if (song == null) {
-			throw new ResourceNotFoundException(songId + " is not present");
-		}
-
-		return song;
+		return songRepository.findById(songId)
+				.orElseThrow(() -> new ResourceNotFoundException("Song with ID " + songId + " not found"));
 	}
 
-	public void updateSongById(Song song, String songId) {
+	@Transactional
+	public void updateSongById(Song updatedSong, String songId) {
+		Song songInRepo = getSongById(songId);
 
-		Song songInRepo = songRepository.findById(songId).orElse(null);
+		songInRepo.setAlbumName(updatedSong.getAlbumName());
+		songInRepo.setArtistName(updatedSong.getArtistName());
+		songInRepo.setDuration(updatedSong.getDuration());
+		songInRepo.setGenre(updatedSong.getGenre());
+		songInRepo.setTitle(updatedSong.getTitle());
 
-		if (songInRepo != null) {
-
-			songInRepo.setAlbumName(song.getAlbumName());
-			songInRepo.setArtistName(song.getArtistName());
-			songInRepo.setDuration(song.getDuration());
-			songInRepo.setGenre(song.getGenre());
-			songInRepo.setTitle(song.getTitle());
-			songRepository.save(songInRepo);
-
-		} else {
-			throw new ResourceNotFoundException("Song not found");
-		}
+		songRepository.save(songInRepo);
 	}
 
-	public void deleteSongById(String songId) throws IOException {
-		Song song = songRepository.findById(songId).orElse(null);
+	@Transactional
+	public void deleteSongById(String songId) {
+		Song song = getSongById(songId);
 
-		if (song != null) {
-			if (song.getFilePath() != null) {
-				Files.deleteIfExists(Paths.get(song.getFilePath()));
-			}
+		storageService.deleteFileIfExists(song.getFilePath());
+		storageService.deleteFileIfExists(song.getCoverImagePath());
 
-			songRepository.deleteById(songId);
-			playHistoryRepository.deleteBySongId(songId);
+		songRepository.deleteById(songId);
+		playHistoryRepository.deleteBySongId(songId);
 
-			List<Playlist> playlistsContainingSongId = playlistRepository.findBySongIdsContaining(songId);
-
-			for (Playlist playlist : playlistsContainingSongId) {
-				playlist.getSongIds().remove(songId);
-				playlistRepository.save(playlist);
-			}
-
-			List<User> users = userRepository.findByLikedSongIdsContaining(songId);
-
-			for (User user : users) {
-				user.getLikedSongIds().remove(songId);
-				userRepository.save(user);
-			}
-
-			if (song.getCoverImagePath() != null) {
-
-				Path coverPath = Paths.get(song.getCoverImagePath());
-
-				if (Files.exists(coverPath)) {
-					Files.delete(coverPath);
-				}
-			}
-
-		} else {
-			throw new ResourceNotFoundException("Song not found");
-		}
+		playlistRepository.pullSongFromAllPlaylists(songId);
+		userRepository.pullSongFromAllLikedLists(songId);
 	}
 
-	public void uploadSong(MultipartFile songFile, String songId)
-			throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
-
-		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
-
-		String oldPath = song.getFilePath();
-
-		String originalFileName = songFile.getOriginalFilename();
-
-		if (songFile.isEmpty() || originalFileName == null || originalFileName.isBlank()) {
-
-			throw new InvalidInputException("Invalid audio file");
-		}
-
-		String extension = originalFileName.substring(originalFileName.lastIndexOf(".") + 1).toLowerCase();
-
-		String contentType = songFile.getContentType();
-
-		if (!extension.equals("wav") && !extension.equals("mp3")) {
-			throw new InvalidInputException("Only WAV and MP3 files are supported");
-		}
-
-		if (extension.equals("wav") && !"audio/wav".equalsIgnoreCase(contentType)) {
-
-			throw new InvalidInputException("Invalid WAV file type");
-		}
-
-		if (extension.equals("mp3") && !"audio/mpeg".equalsIgnoreCase(contentType)) {
-
-			throw new InvalidInputException("Invalid MP3 file type");
-		}
-
-		Path folder = Paths.get("songs");
-
-		Files.createDirectories(folder);
-
-		String fileName = UUID.randomUUID() + "." + extension;
-
-		Path filePath = folder.resolve(fileName);
-
-		Files.write(filePath, songFile.getBytes());
-
-		// Read audio duration
-		AudioFile audioFile = AudioFileIO.read(filePath.toFile());
-
-		AudioHeader audioHeader = audioFile.getAudioHeader();
-
-		int durationInSeconds = audioHeader.getTrackLength();
-
-		long durationInMilliseconds = durationInSeconds * 1000L;
-
-		song.setDuration(durationInMilliseconds);
-
-		song.setFilePath(filePath.toString());
-
-		songRepository.save(song);
-
-		// Delete old audio file
-		if (oldPath != null) {
-			Files.deleteIfExists(Paths.get(oldPath));
-		}
-	}
-
-	public Resource streamSong(String songId) throws IOException {
-
-		Song song = songRepository.findById(songId).orElse(null);
-
-		if (song != null && song.getFilePath() != null) {
-
-			if (Files.exists(Path.of(song.getFilePath()))) {
-
-				Path filePath = Paths.get(song.getFilePath());
-				return new FileSystemResource(filePath);
-			}
-
-		}
-
-		throw new ResourceNotFoundException("Song not found");
-	}
-
-	public MediaType getMediaType(Resource resource) {
-
-		String fileName = resource.getFilename().toLowerCase();
-
-		if (fileName.endsWith(".mp3")) {
-			return MediaType.parseMediaType("audio/mpeg");
-		}
-
-		if (fileName.endsWith(".wav")) {
-			return MediaType.parseMediaType("audio/wav");
-		}
-
-		return null;
-	}
-
-	public ResponseEntity<StreamingResponseBody> streamFullFile(Resource resource, MediaType mediaType,
-			long contentLength) {
-
-		StreamingResponseBody body = outputStream -> {
-
-			try (InputStream inputStream = resource.getInputStream()) {
-				inputStream.transferTo(outputStream);
-			}
-		};
-
-		return ResponseEntity.ok().contentType(mediaType).contentLength(contentLength).body(body);
-	}
-
-	public HttpRange parseRange(String range) {
+	@Transactional
+	public void uploadSongFile(String songId, MultipartFile file) {
+		Song song = getSongById(songId);
+		String oldFilePath = song.getFilePath();
 
 		try {
-			return HttpRange.parseRanges(range).get(0);
-		} catch (IllegalArgumentException e) {
-			return null;
+			String newFilePath = storageService.storeSongFile(file, ALLOWED_AUDIO_EXTENSIONS);
+
+			File audioFileOnDisk = new File(newFilePath);
+			AudioFile audioFile = AudioFileIO.read(audioFileOnDisk);
+			AudioHeader audioHeader = audioFile.getAudioHeader();
+			long durationInMillis = audioHeader.getTrackLength() * 1000L;
+
+			song.setDuration(durationInMillis);
+			song.setFilePath(newFilePath);
+			songRepository.save(song);
+
+			storageService.deleteFileIfExists(oldFilePath);
+
+		} catch (Exception e) {
+			throw new InvalidInputException("Failed to process audio file: " + e.getMessage());
 		}
 	}
 
-	public boolean isValidRange(long start, long end, long contentLength) {
+	@Transactional
+	public Song uploadCoverImage(String songId, MultipartFile file) {
+		Song song = getSongById(songId);
+		String oldCoverPath = song.getCoverImagePath();
 
-		return start >= 0 && end >= start && start < contentLength && end < contentLength;
-	}
+		try {
+			String newCoverPath = storageService.storeCoverFile(file, ALLOWED_IMAGE_EXTENSIONS);
+			song.setCoverImagePath(newCoverPath);
+			Song savedSong = songRepository.save(song);
 
-	public ResponseEntity<StreamingResponseBody> streamRange(Resource resource, MediaType mediaType, long start,
-			long end, long contentLength) {
-
-		long count = end - start + 1;
-
-		StreamingResponseBody body = outputStream -> {
-
-			try (InputStream inputStream = resource.getInputStream()) {
-
-				skipBytes(inputStream, start);
-
-				streamBytes(inputStream, outputStream, count);
-			}
-		};
-
-		return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).header("Accept-Ranges", "bytes")
-				.header("Content-Range", "bytes " + start + "-" + end + "/" + contentLength).contentLength(count)
-				.contentType(mediaType).body(body);
-	}
-
-	private void skipBytes(InputStream inputStream, long start) throws IOException {
-
-		long skipped = 0;
-
-		while (skipped < start) {
-
-			long currentSkip = inputStream.skip(start - skipped);
-
-			if (currentSkip == 0) {
-				break;
-			}
-
-			skipped += currentSkip;
+			storageService.deleteFileIfExists(oldCoverPath);
+			return savedSong;
+		} catch (Exception e) {
+			throw new InvalidInputException("Failed to store image cover: " + e.getMessage());
 		}
 	}
 
-	private void streamBytes(InputStream inputStream, OutputStream outputStream, long count) throws IOException {
-
-		byte[] buffer = new byte[8192];
-
-		long remaining = count;
-
-		while (remaining > 0) {
-
-			int bytesToRead = (int) Math.min(buffer.length, remaining);
-
-			int bytesRead = inputStream.read(buffer, 0, bytesToRead);
-
-			if (bytesRead == -1) {
-				break;
-			}
-
-			outputStream.write(buffer, 0, bytesRead);
-
-			remaining -= bytesRead;
-		}
+	@Transactional(readOnly = true)
+	public Resource getSongResource(String songId) {
+		Song song = getSongById(songId);
+		return storageService.loadAsResource(song.getFilePath());
 	}
 
+	@Transactional(readOnly = true)
+	public Resource getCoverImageResource(String songId) {
+		Song song = getSongById(songId);
+		return storageService.loadAsResource(song.getCoverImagePath());
+	}
+
+	@Transactional
+	public void incrementPlayCount(String songId) {
+		Song song = getSongById(songId);
+		song.setPlayCount(song.getPlayCount() + 1);
+		songRepository.save(song);
+	}
+
+	@Transactional(readOnly = true)
 	public Page<Song> searchSongs(String query, Pageable pageable) {
 		return songRepository.searchSongs(query, pageable);
 	}
 
-	public void songCountTracker(String songId) {
-
-		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException(songId));
-
-		song.setPlayCount(song.getPlayCount() + 1);
-		
-		songRepository.save(song);
-	}
-
+	@Transactional(readOnly = true)
 	public Page<Song> getMostPlayedSongs(int page, int size) {
-
 		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("playCount"), Sort.Order.asc("title")));
-
 		return songRepository.findAllByOrderByPlayCountDesc(pageable);
 	}
 
+	@Transactional(readOnly = true)
 	public Page<Song> getMostPlayedSongsByGenre(String genre, int page, int size) {
-
 		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("playCount"), Sort.Order.asc("title")));
-
 		return songRepository.findByGenre(genre, pageable);
 	}
 
-	public Song uploadCover(String songId, MultipartFile coverFile) throws IOException {
-
-		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
-
-		String originalFilename = coverFile.getOriginalFilename();
-
-		if (originalFilename == null) {
-			throw new InvalidInputException("Invalid file");
-		}
-
-		String extension = "";
-
-		if (originalFilename.toLowerCase().endsWith(".jpg")) {
-			extension = ".jpg";
-		} else if (originalFilename.toLowerCase().endsWith(".jpeg")) {
-			extension = ".jpeg";
-		} else if (originalFilename.toLowerCase().endsWith(".png")) {
-			extension = ".png";
-		} else {
-			throw new InvalidInputException("Only JPG, JPEG and PNG images are allowed");
-		}
-
-		Path coverDirectory = Paths.get("covers");
-
-		if (!Files.exists(coverDirectory)) {
-			Files.createDirectories(coverDirectory);
-		}
-
-		String fileName = UUID.randomUUID() + extension;
-
-		Path newCoverPath = coverDirectory.resolve(fileName);
-
-		Files.copy(coverFile.getInputStream(), newCoverPath, StandardCopyOption.REPLACE_EXISTING);
-
-		if (song.getCoverImagePath() != null) {
-			Path oldCoverPath = Paths.get(song.getCoverImagePath());
-
-			if (Files.exists(oldCoverPath)) {
-				Files.delete(oldCoverPath);
-			}
-		}
-
-		song.setCoverImagePath(newCoverPath.toString());
-
-		return songRepository.save(song);
-	}
-
-	public Resource getCoverImage(String songId) {
-
-		Song song = songRepository.findById(songId).orElseThrow(() -> new ResourceNotFoundException("Song not found"));
-
-		if (song.getCoverImagePath() == null) {
-			throw new ResourceNotFoundException("Cover image not found");
-		}
-
-		Resource resource = new FileSystemResource(song.getCoverImagePath());
-
-		if (!resource.exists()) {
-			throw new ResourceNotFoundException("Cover image file not found");
-		}
-
-		return resource;
-	}
-
+	@Transactional(readOnly = true)
 	public ArtistStatistics getArtistStatistics() {
-
 		User artist = securityService.getCurrentUser();
-
 		List<Song> songs = songRepository.findByOwnerId(artist.getId());
 
 		long totalSongs = songs.size();
-
 		long totalPlays = songs.stream().mapToLong(Song::getPlayCount).sum();
 
-		Song mostPlayed = songs.stream().max(Comparator.comparingLong(Song::getPlayCount)).orElse(null);
+		Optional<Song> mostPlayedOpt = songs.stream().max(Comparator.comparingLong(Song::getPlayCount));
 
-		String mostPlayedSong = null;
-		long mostPlayedCount = 0;
-
-		if (mostPlayed != null) {
-			mostPlayedSong = mostPlayed.getTitle();
-			mostPlayedCount = mostPlayed.getPlayCount();
-		}
+		String mostPlayedSong = mostPlayedOpt.map(Song::getTitle).orElse(null);
+		long mostPlayedCount = mostPlayedOpt.map(Song::getPlayCount).orElse(0L);
 
 		return new ArtistStatistics(totalSongs, totalPlays, mostPlayedSong, mostPlayedCount);
 	}
 
+	@Transactional(readOnly = true)
 	public List<Song> getRecommendations() {
-
 		User user = securityService.getCurrentUser();
-		Set<String> likedSongs = user.getLikedSongIds();
+		Set<String> likedSongIds = user.getLikedSongIds();
 
-		List<String> genres = likedSongs
-				.stream()
-				.map(songRepository::findById)
-				.flatMap(Optional::stream)
+		if (likedSongIds.isEmpty()) {
+			return List.of();
+		}
+
+		// Optimized batch query instead of N+1 loop
+		List<Song> likedSongs = songRepository.findAllById(likedSongIds);
+
+		List<String> genres = likedSongs.stream()
 				.map(Song::getGenre)
+				.filter(Objects::nonNull)
 				.distinct()
 				.toList();
 
@@ -459,11 +212,9 @@ public class SongService {
 			return List.of();
 		}
 
-		List<Song> recommendations = songRepository.findByGenreInOrderByPlayCountDesc(genres);
-
-		return recommendations
+		return songRepository.findByGenreInOrderByPlayCountDesc(genres)
 				.stream()
-				.filter(song -> !likedSongs.contains(song.getId()))
+				.filter(song -> !likedSongIds.contains(song.getId()))
 				.limit(10)
 				.toList();
 	}

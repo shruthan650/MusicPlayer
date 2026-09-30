@@ -1,176 +1,153 @@
 package com.shruthan.musicplayer.controller;
 
-import java.io.IOException;
-import java.util.List;
-
-import org.jaudiotagger.audio.exceptions.CannotReadException;
-import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
-import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
-import org.jaudiotagger.tag.TagException;
+import com.shruthan.musicplayer.dto.ArtistStatistics;
+import com.shruthan.musicplayer.model.Song;
+import com.shruthan.musicplayer.service.SongService;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpRange;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import com.shruthan.musicplayer.dto.ArtistStatistics;
-import com.shruthan.musicplayer.model.Song;
-import com.shruthan.musicplayer.service.PlayHistoryService;
-import com.shruthan.musicplayer.service.SongService;
-
-import jakarta.validation.Valid;
+import java.io.IOException;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/songs")
 public class SongController {
 
 	private final SongService songService;
-	private final PlayHistoryService playHistoryService;
 
-	public SongController(SongService service, PlayHistoryService playHistoryService) {
-		this.songService = service;
-		this.playHistoryService = playHistoryService;
+	public SongController(SongService songService) {
+		this.songService = songService;
 	}
 
-	@GetMapping("/songs")
-	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public Page<Song> getAllSongs(@PageableDefault(size = 10, page = 0) Pageable pageable) {
-		return songService.getAllSongs(pageable);
+	@GetMapping
+	public ResponseEntity<Page<Song>> getAllSongs(@PageableDefault(size = 20) Pageable pageable) {
+		return ResponseEntity.ok(songService.getAllSongs(pageable));
 	}
 
-	@PostMapping("/song")
-	@PreAuthorize("hasAnyRole('ADMIN', 'ARTIST')")
-	public Song addSong(@Valid @RequestBody Song song) {
-		return songService.addSong(song);
+	@GetMapping("/{id}")
+	public ResponseEntity<Song> getSongById(@PathVariable String id) {
+		return ResponseEntity.ok(songService.getSongById(id));
 	}
 
-	@GetMapping("/song/{songId}")
-	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public Song getSongById(@PathVariable String songId) {
-		return songService.getSongById(songId);
+	@PostMapping
+	public ResponseEntity<Song> addSong(@RequestBody Song song) {
+		Song createdSong = songService.addSong(song);
+		return ResponseEntity.status(HttpStatus.CREATED).body(createdSong);
 	}
 
-	@PutMapping("/song/{songId}")
-	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
-	public void updateSongById(@PathVariable String songId, @Valid @RequestBody Song song) {
-		songService.updateSongById(song, songId);
+	@PutMapping("/{id}")
+	public ResponseEntity<Void> updateSong(@PathVariable String id, @RequestBody Song song) {
+		songService.updateSongById(song, id);
+		return ResponseEntity.noContent().build();
 	}
 
-	@DeleteMapping("/song/{songId}")
-	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
-	public void deleteSongById(@PathVariable String songId) throws IOException {
-		songService.deleteSongById(songId);
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deleteSong(@PathVariable String id) {
+		songService.deleteSongById(id);
+		return ResponseEntity.noContent().build();
 	}
 
-	@PostMapping("/song/upload/{songId}")
-	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
-	public void uploadSong(@RequestParam("songFile") MultipartFile songFile, @PathVariable String songId)
-			throws IOException, CannotReadException, TagException, ReadOnlyFileException, InvalidAudioFrameException {
-
-		songService.uploadSong(songFile, songId);
+	@PostMapping("/{id}/upload")
+	public ResponseEntity<Void> uploadSongFile(
+			@PathVariable String id,
+			@RequestParam("file") MultipartFile file) {
+		songService.uploadSongFile(id, file);
+		return ResponseEntity.ok().build();
 	}
 
-	@PostMapping("/song/{songId}/cover")
-	@PreAuthorize("hasRole('ADMIN') or @securityService.isSongOwner(#songId)")
-	public Song uploadCover(@PathVariable String songId, @RequestParam("coverFile") MultipartFile coverFile)
-			throws IOException {
-
-		return songService.uploadCover(songId, coverFile);
+	@PostMapping("/{id}/cover")
+	public ResponseEntity<Song> uploadCoverImage(
+			@PathVariable String id,
+			@RequestParam("file") MultipartFile file) {
+		Song updatedSong = songService.uploadCoverImage(id, file);
+		return ResponseEntity.ok(updatedSong);
 	}
 
-	@GetMapping("/songs/search")
-	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public Page<Song> searchSongs(@RequestParam String q, @PageableDefault(size = 10, page = 0) Pageable pageable) {
+	@GetMapping("/{id}/stream")
+	public ResponseEntity<ResourceRegion> streamAudio(
+			@PathVariable String id,
+			@RequestHeader HttpHeaders headers) throws IOException {
 
-		return songService.searchSongs(q, pageable);
-	}
+		Resource songResource = songService.getSongResource(id);
+		long contentLength = songResource.contentLength();
 
-	@GetMapping("/song/{songId}/audio")
-	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public ResponseEntity<StreamingResponseBody> streamSong(@PathVariable String songId,
-			@RequestHeader(value = "Range", required = false) String range) throws IOException {
+		HttpRange range = headers.getRange().isEmpty() ? null : headers.getRange().get(0);
 
-		Resource resource = songService.streamSong(songId);
+		MediaType mediaType = MediaTypeFactory.getMediaType(songResource)
+				.orElse(MediaType.APPLICATION_OCTET_STREAM);
 
-		if (resource == null) {
-			return ResponseEntity.notFound().build();
+		if (range != null) {
+			long start = range.getRangeStart(contentLength);
+			long end = range.getRangeEnd(contentLength);
+
+			long chunkSize = Math.min(1024 * 1024L, end - start + 1);
+			ResourceRegion region = new ResourceRegion(songResource, start, chunkSize);
+
+			return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+					.contentType(mediaType)
+					.body(region);
+		} else {
+			long chunkSize = Math.min(1024 * 1024L, contentLength);
+			ResourceRegion region = new ResourceRegion(songResource, 0, chunkSize);
+
+			return ResponseEntity.status(HttpStatus.OK)
+					.contentType(mediaType)
+					.body(region);
 		}
-
-		// Record playback
-		playHistoryService.addToHistory(songId);
-		songService.songCountTracker(songId);
-
-		long contentLength = resource.contentLength();
-
-		MediaType mediaType = songService.getMediaType(resource);
-
-		if (mediaType == null) {
-			return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).build();
-		}
-
-		// Normal request
-		if (range == null) {
-			return songService.streamFullFile(resource, mediaType, contentLength);
-		}
-
-		// Range request
-		HttpRange httpRange = songService.parseRange(range);
-
-		if (httpRange == null) {
-			return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
-		}
-
-		long start = httpRange.getRangeStart(contentLength);
-		long end = httpRange.getRangeEnd(contentLength);
-
-		if (!songService.isValidRange(start, end, contentLength)) {
-			return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).build();
-		}
-
-		return songService.streamRange(resource, mediaType, start, end, contentLength);
 	}
 
-	@GetMapping("/songs/most-played")
-	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public Page<Song> getMostPlayedSongs(@RequestParam(defaultValue = "0") int page,
+	@GetMapping("/{id}/cover")
+	public ResponseEntity<Resource> getCoverImage(@PathVariable String id) {
+		Resource coverResource = songService.getCoverImageResource(id);
+		MediaType mediaType = MediaTypeFactory.getMediaType(coverResource)
+				.orElse(MediaType.IMAGE_JPEG);
+
+		return ResponseEntity.ok()
+				.contentType(mediaType)
+				.body(coverResource);
+	}
+
+	@PostMapping("/{id}/play")
+	public ResponseEntity<Void> incrementPlayCount(@PathVariable String id) {
+		songService.incrementPlayCount(id);
+		return ResponseEntity.ok().build();
+	}
+
+	@GetMapping("/search")
+	public ResponseEntity<Page<Song>> searchSongs(
+			@RequestParam("query") String query,
+			@PageableDefault(size = 20) Pageable pageable) {
+		return ResponseEntity.ok(songService.searchSongs(query, pageable));
+	}
+
+	@GetMapping("/most-played")
+	public ResponseEntity<Page<Song>> getMostPlayedSongs(
+			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-
-		return songService.getMostPlayedSongs(page, size);
+		return ResponseEntity.ok(songService.getMostPlayedSongs(page, size));
 	}
 
-	@GetMapping("/songs/most-played/genre/{genre}")
-	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-	public Page<Song> getMostPlayedSongsByGenre(@PathVariable String genre, @RequestParam(defaultValue = "0") int page,
+	@GetMapping("/most-played/genre")
+	public ResponseEntity<Page<Song>> getMostPlayedSongsByGenre(
+			@RequestParam String genre,
+			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-
-		return songService.getMostPlayedSongsByGenre(genre, page, size);
+		return ResponseEntity.ok(songService.getMostPlayedSongsByGenre(genre, page, size));
 	}
 
 	@GetMapping("/artist/statistics")
-	@PreAuthorize("hasRole('ARTIST')")
-	public ArtistStatistics getArtistStatistics() {
-		return songService.getArtistStatistics();
+	public ResponseEntity<ArtistStatistics> getArtistStatistics() {
+		return ResponseEntity.ok(songService.getArtistStatistics());
 	}
 
-	@GetMapping("/songs/recommend")
-	@PreAuthorize("isAuthenticated()")
-	public List<Song> getRecommendations() {
-		return songService.getRecommendations();
+	@GetMapping("/recommendations")
+	public ResponseEntity<List<Song>> getRecommendations() {
+		return ResponseEntity.ok(songService.getRecommendations());
 	}
 }
