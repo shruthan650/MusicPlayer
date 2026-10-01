@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shruthan.musicplayer.dto.LoginResponse;
 import com.shruthan.musicplayer.dto.UserResponse;
@@ -72,6 +73,7 @@ public class UserService implements UserDetailsService {
 		return new CustomUserDetails(user);
 	}
 
+	@Transactional
 	public User registerUser(User user) {
 
 		if (user.getRole() == null) {
@@ -98,6 +100,7 @@ public class UserService implements UserDetailsService {
 		return new UserResponse(user.getId(), user.getUserEmail(), user.getRole());
 	}
 
+	@Transactional
 	public LoginResponse updateEmail(String email) {
 
 		User user = securityService.getCurrentUser();
@@ -119,6 +122,7 @@ public class UserService implements UserDetailsService {
 		return new LoginResponse(token, response);
 	}
 
+	@Transactional
 	public void updatePassword(String oldPassword, String newPassword) {
 
 	    User user = securityService.getCurrentUser();
@@ -132,6 +136,7 @@ public class UserService implements UserDetailsService {
 	    userRepository.save(user);
 	}
 	
+	@Transactional
 	public List<UserResponse> getAllUsers() {
 	    return userRepository.findAll()
 	            .stream()
@@ -143,6 +148,7 @@ public class UserService implements UserDetailsService {
 	            .toList();
 	}
 	
+	@Transactional
 	public void deleteUser(String userId) throws IOException {
 
 	    User currentUser = securityService.getCurrentUser();

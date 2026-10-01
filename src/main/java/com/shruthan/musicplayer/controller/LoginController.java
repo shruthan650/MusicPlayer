@@ -19,42 +19,36 @@ import jakarta.validation.Valid;
 @RequestMapping("/api")
 public class LoginController {
 
-    private final UserService userService;
-    private final AuthenticationManager authenticationManager;
-    private final JWTService jwtService;
+	private final UserService userService;
+	private final AuthenticationManager authenticationManager;
+	private final JWTService jwtService;
 
-    public LoginController(
-    		UserService userService,
-    		AuthenticationManager authenticationManager,
-    		JWTService jwtService) {
-    	
-        this.userService = userService;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-    }
+	public LoginController(UserService userService, AuthenticationManager authenticationManager,
+			JWTService jwtService) {
 
-    @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody User user) {
+		this.userService = userService;
+		this.authenticationManager = authenticationManager;
+		this.jwtService = jwtService;
+	}
 
-        User savedUser = userService.registerUser(user);
+	@PostMapping("/register")
+	public ResponseEntity<UserResponse> registerUser(@Valid @RequestBody User user) {
 
-        UserResponse response = new UserResponse(
-            savedUser.getId(),
-            savedUser.getUserEmail(),
-            savedUser.getRole()
-        );
+		User savedUser = userService.registerUser(user);
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
-    }
-    
-    @PostMapping("/login")
-    public String getCredentials(@RequestBody Login login) {
+		UserResponse response = new UserResponse(savedUser.getId(), savedUser.getUserEmail(), savedUser.getRole());
+
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	@PostMapping("/login")
+	public ResponseEntity<String> getCredentials(@RequestBody Login login) {
 
 		Authentication authentication = authenticationManager
 				.authenticate(new UsernamePasswordAuthenticationToken(login.getUserEmail(), login.getPassword()));
-		
-		return jwtService.generateToken(authentication.getName());
-    }
+
+		String token = jwtService.generateToken(authentication.getName());
+
+		return ResponseEntity.ok(token);
+	}
 }

@@ -124,11 +124,9 @@ src/
     └── resources/
         └── application.properties
 
-songs/
-└── Audio files
-
-covers/
-└── Cover images
+storage/
+└── songs
+└── covers
 ```
 
 > Package names may vary depending on the project configuration.

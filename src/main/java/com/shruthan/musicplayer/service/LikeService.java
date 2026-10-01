@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Song;
@@ -25,6 +26,7 @@ public class LikeService {
 		this.userRepository = userRepository;
 	}
 
+	@Transactional
 	public void likeSong(String songId) {
 
 		User user = securityService.getCurrentUser();
@@ -40,6 +42,7 @@ public class LikeService {
 		userRepository.save(user);
 	}
 
+	@Transactional
 	public void unlikeSong(String songId) {
 
 		User user = securityService.getCurrentUser();
@@ -53,6 +56,7 @@ public class LikeService {
 		userRepository.save(user);
 	}
 
+	@Transactional(readOnly = true)
 	public List<Song> getLikedSongs() {
 
 		User user = securityService.getCurrentUser();

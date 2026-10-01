@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.PlayHistory;
@@ -30,6 +31,7 @@ public class PlayHistoryService {
 		this.songRepository = songRepository;
 	}
 	
+	@Transactional(readOnly = true)
 	public Page<PlayHistory> getHistory(int page, int size) {
 
 	    User user = securityService.getCurrentUser();
@@ -45,6 +47,7 @@ public class PlayHistoryService {
 	    );
 	}
 
+	@Transactional
 	public void addToHistory(String songId) {
 
 	    User user = securityService.getCurrentUser();
@@ -72,6 +75,7 @@ public class PlayHistoryService {
 	    playHistoryRepository.save(history);
 	}
 	
+	@Transactional
 	public void updatePosition(String songId, long position) {
 		
 		User user = securityService.getCurrentUser();
@@ -95,6 +99,7 @@ public class PlayHistoryService {
 		playHistoryRepository.save(playHistory);
 	}
 	
+	@Transactional
 	public PlayHistory getPosition(String songId) {
 		
 		User user = securityService.getCurrentUser();

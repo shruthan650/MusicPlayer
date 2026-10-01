@@ -1,15 +1,14 @@
 package com.shruthan.musicplayer.repository;
 
-import com.shruthan.musicplayer.model.Song;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
-import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.shruthan.musicplayer.model.Song;
 
-@Repository
 public interface SongRepository extends MongoRepository<Song, String> {
 
 	@Query("""

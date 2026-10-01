@@ -199,7 +199,6 @@ public class SongService {
 			return List.of();
 		}
 
-		// Optimized batch query instead of N+1 loop
 		List<Song> likedSongs = songRepository.findAllById(likedSongIds);
 
 		List<String> genres = likedSongs.stream()

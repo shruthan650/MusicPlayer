@@ -2,16 +2,13 @@ package com.shruthan.musicplayer.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
@@ -20,81 +17,76 @@ import com.shruthan.musicplayer.service.PlaylistService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/playlist")
 public class PlaylistController {
 
-    private final PlaylistService service;
+	private final PlaylistService service;
 
-    public PlaylistController(PlaylistService service) {
-        this.service = service;
-    }
+	public PlaylistController(PlaylistService service) {
+		this.service = service;
+	}
 
-    @GetMapping("/playlists")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
-    public List<Playlist> getAllPlaylists() {
-        return service.getAllPlaylists();
-    }
+	@GetMapping
+	@PreAuthorize("hasAnyRole('ADMIN', 'USER', 'ARTIST')")
+	public ResponseEntity<Page<Playlist>> getAllPlaylists(@PageableDefault(size = 20) Pageable pageable) {
+		return ResponseEntity.ok(service.getAllPlaylists(pageable));
+	}
 
-    @GetMapping("/playlist/{playlistId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public List<Song> getPlaylistById(@PathVariable String playlistId) {
-        return service.getPlaylistById(playlistId);
-    }
+	@GetMapping("/{playlistId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<List<Song>> getPlaylistById(@PathVariable String playlistId) {
+		return ResponseEntity.ok(service.getPlaylistById(playlistId));
+	}
 
-    @PostMapping("/playlist")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ARTIST', 'USER')")
-    public Playlist createPlaylist(@Valid @RequestBody Playlist playlist) {
-        return service.createPlaylist(playlist);
-    }
+	@PostMapping
+	@PreAuthorize("hasAnyRole('ADMIN', 'ARTIST', 'USER')")
+	public ResponseEntity<Playlist> createPlaylist(@Valid @RequestBody Playlist playlist) {
+		return ResponseEntity.status(HttpStatus.CREATED).body(playlist);
+	}
 
-    @PutMapping("/playlist/{playlistId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public Playlist updatePlaylistById(
-            @Valid @RequestBody Playlist playlist,
-            @PathVariable String playlistId) {
+	@PutMapping("/{playlistId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<Playlist> updatePlaylistById(@Valid @RequestBody Playlist playlist,
+			@PathVariable String playlistId) {
+		return ResponseEntity.ok(service.updatePlaylistById(playlist, playlistId));
 
-        return service.updatePlaylistById(playlist, playlistId);
-    }
+	}
 
-    @DeleteMapping("/playlist/{playlistId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public void deletePlaylistById(@PathVariable String playlistId) {
-        service.deletePlaylistById(playlistId);
-    }
+	@DeleteMapping("/{playlistId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<Void> deletePlaylistById(@PathVariable String playlistId) {
+		service.deletePlaylistById(playlistId);
+		return ResponseEntity.noContent().build();
+	}
 
-    @PostMapping("/playlist/{playlistId}/song/{songId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public void addSongToPlaylist(
-            @PathVariable String playlistId,
-            @PathVariable String songId) {
+	@PostMapping("/{playlistId}/song/{songId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<Void> addSongToPlaylist(@PathVariable String playlistId, @PathVariable String songId) {
 
-        service.addSongToPlaylist(songId, playlistId);
-    }
+		service.addSongToPlaylist(songId, playlistId);
+		return ResponseEntity.ok().build();
+	}
 
-    @DeleteMapping("/playlist/{playlistId}/song/{songId}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public Playlist removeSongFromPlaylist(
-            @PathVariable String playlistId,
-            @PathVariable String songId) {
+	@DeleteMapping("/{playlistId}/song/{songId}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<Playlist> removeSongFromPlaylist(@PathVariable String playlistId,
+			@PathVariable String songId) {
+		return ResponseEntity.ok(service.removeSongFromPlaylist(songId, playlistId));
 
-        return service.removeSongFromPlaylist(songId, playlistId);
-    }
-    
-    @PutMapping("/playlist/{playlistId}/song/{songId}/{position}")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public Playlist moveSongToDesiredPosition(
-    		@PathVariable String playlistId,
-    		@PathVariable String songId,
-    		@PathVariable int position) {
-    	return service.moveSongToDesiredPosition(playlistId, songId, position);
-    }
-    
-    @PostMapping("/playlist/{playlistId}/song/{songId}/next")
-    @PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
-    public Playlist insertNewSongAtPosition(
-    		@PathVariable String playlistId,
-    		@PathVariable String songId,
-    		@RequestParam String currentSongId) {
-    	return service.insertNewSongAtPosition(playlistId, songId, currentSongId);
-    }
+	}
+
+	@PutMapping("/{playlistId}/song/{songId}/{position}")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<Playlist> moveSongToDesiredPosition(@PathVariable String playlistId,
+			@PathVariable String songId, @PathVariable int position) {
+		return ResponseEntity.ok(service.moveSongToDesiredPosition(playlistId, songId, position));
+
+	}
+
+	@PostMapping("/{playlistId}/song/{songId}/next")
+	@PreAuthorize("hasRole('ADMIN') or @securityService.isPlaylistOwner(#playlistId)")
+	public ResponseEntity<Playlist> insertNewSongAtPosition(@PathVariable String playlistId,
+			@PathVariable String songId, @RequestParam String currentSongId) {
+		return ResponseEntity.ok(service.insertNewSongAtPosition(playlistId, songId, currentSongId));
+	}
 }

@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.shruthan.musicplayer.model.Playlist;
 import com.shruthan.musicplayer.model.Song;
@@ -31,6 +32,7 @@ public class SecurityService {
 		this.userRepository = userRepository;
 	}
 
+	@Transactional
 	public boolean isPlaylistOwner(String playlistId) {
 
 		Optional<Playlist> playlist = playlistRepository.findById(playlistId);
@@ -52,6 +54,7 @@ public class SecurityService {
 		return (user.getId().equals(playlist.get().getOwnerId()));
 	}
 
+	@Transactional
 	public boolean isSongOwner(String songId) {
 
 		Optional<Song> song = songRepository.findById(songId);
@@ -73,6 +76,7 @@ public class SecurityService {
 		return (user.getId().equals(song.get().getOwnerId()));
 	}
 	
+	@Transactional
 	public User getCurrentUser() {
 	    Authentication authentication =
 	            SecurityContextHolder.getContext().getAuthentication();
