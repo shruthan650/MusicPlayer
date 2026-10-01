@@ -24,6 +24,6 @@ Thumbs.db
 songs/
 
 # Logs
-logs/
+log/
 *.log
 covers/

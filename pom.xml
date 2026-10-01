@@ -97,13 +97,9 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Source:
-		https://mvnrepository.com/artifact/io.miragon.miranum/spring-security-starter -->
 		<dependency>
-			<groupId>io.miragon.miranum</groupId>
-			<artifactId>spring-security-starter</artifactId>
-			<version>0.8.0</version>
-			<scope>compile</scope>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
 		<dependency>
