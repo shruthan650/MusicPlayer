@@ -7,10 +7,11 @@ A RESTful music streaming backend built with **Java and Spring Boot**. The appli
 ## 🚀 Tech Stack
 
 - **Java 25**
-- **Spring Boot**
+- **Spring Boot 4.1.1**
 - **Spring Security**
 - **JWT Authentication**
 - **MongoDB**
+- **MongoDB GridFS**
 - **Maven**
 - **Jaudiotagger**
 - **Lombok**
@@ -63,16 +64,16 @@ Supported cover image formats:
 - `.jpeg`
 - `.png`
 
-Song metadata is stored in MongoDB while audio and cover files are stored on the server filesystem through `StorageService`.
+Song metadata is stored in MongoDB, while audio and cover-image binary data are stored in **MongoDB GridFS**.
 
 ### ▶️ HTTP Range Audio Streaming
 
 The backend supports partial audio responses using HTTP Range requests.
 
-- Full/initial audio responses
+- Full audio responses
 - Partial Content responses (`206 Partial Content`)
 - HTTP Range handling
-- Resource-region streaming
+- `ResourceRegion` streaming
 - Browser-compatible seeking
 - Audio playback through a frontend client
 
@@ -147,25 +148,49 @@ Artists can view statistics for songs they own:
 - Most-played song
 - Most-played song count
 
-### 🗂️ File Storage
+---
 
-`StorageService` handles physical file operations:
+## 🗄️ MongoDB GridFS Storage
 
-- Creates storage directories at startup
-- Validates file extensions
-- Generates UUID-based filenames
-- Stores audio files and cover images separately
-- Loads files as Spring `Resource` objects
-- Deletes physical files when required
-- Protects stored filenames from path traversal
+Audio and cover files are stored in MongoDB using **GridFS** instead of the local filesystem.
 
-Storage structure:
+GridFS automatically splits large files into chunks and stores them across two MongoDB collections:
 
 ```text
-storage/
-├── songs/
-└── covers/
+MusicPlayer
+├── songRepo
+├── userRepo
+├── playlistRepo
+├── fs.files
+└── fs.chunks
 ```
+
+### Song file references
+
+The `Song` document stores GridFS file IDs:
+
+```text
+Song
+├── fileId       → audio file in GridFS
+└── coverFileId  → cover image in GridFS
+```
+
+The actual binary data is stored by GridFS in:
+
+- `fs.files` — file metadata
+- `fs.chunks` — binary file chunks
+
+### GridFS Service
+
+`GridFsStorageService` is responsible for:
+
+- Uploading files to GridFS
+- Finding GridFS files by ID
+- Loading files as `GridFsResource`
+- Deleting files from GridFS
+- Validating GridFS file IDs
+
+The service is separated from `SongService`, keeping storage concerns independent from song business logic.
 
 ---
 
@@ -189,10 +214,6 @@ src/
     │
     └── resources/
         └── application.properties
-
-storage/
-├── songs/
-└── covers/
 ```
 
 ### Service Layer
@@ -200,12 +221,12 @@ storage/
 The service layer currently includes:
 
 - `SongService`
+- `GridFsStorageService`
 - `PlaylistService`
 - `UserService`
 - `LikeService`
 - `PlayHistoryService`
 - `SecurityService`
-- `StorageService`
 
 ---
 
@@ -229,8 +250,8 @@ All protected endpoints require authentication unless otherwise stated.
 | `POST` | `/api/songs` | Create a song |
 | `PUT` | `/api/songs/{id}` | Update song metadata |
 | `DELETE` | `/api/songs/{id}` | Delete a song |
-| `POST` | `/api/songs/{id}/upload` | Upload audio file |
-| `POST` | `/api/songs/{id}/cover` | Upload cover image |
+| `POST` | `/api/songs/{id}/upload` | Upload audio file to GridFS |
+| `POST` | `/api/songs/{id}/cover` | Upload cover image to GridFS |
 | `GET` | `/api/songs/{id}/stream` | Stream audio |
 | `GET` | `/api/songs/{id}/cover` | Get cover image |
 | `POST` | `/api/songs/{id}/play` | Increment play count |
@@ -242,7 +263,7 @@ All protected endpoints require authentication unless otherwise stated.
 
 Song listing and search support Spring pagination.
 
-Example:
+Examples:
 
 ```http
 GET /api/songs?page=0&size=20
@@ -312,6 +333,8 @@ spring.servlet.multipart.max-request-size=50MB
 ```
 
 Make sure MongoDB is running before starting the application.
+
+GridFS collections are created and managed by MongoDB through Spring Data MongoDB.
 
 ---
 
@@ -407,8 +430,7 @@ The backend uses:
 - Song ownership checks
 - Playlist ownership checks
 - File extension validation
-- UUID-based file names
-- Path traversal protection
+- GridFS file ID validation
 - Global exception handling
 
 ---
@@ -442,17 +464,30 @@ MongoDB stores:
 - Playlists
 - Play history
 
-### File System
+### MongoDB GridFS
 
-The application stores:
+GridFS stores:
+
+- Audio files
+- Cover images
+
+GridFS uses:
 
 ```text
-storage/
-├── songs/
-└── covers/
+fs.files
+fs.chunks
 ```
 
-MongoDB stores the corresponding file paths for songs and cover images.
+for file metadata and binary chunks respectively.
+
+The `Song` document stores references to these files using:
+
+```text
+fileId
+coverFileId
+```
+
+No local `storage/songs` or `storage/covers` directories are required for the current file-storage implementation.
 
 ---
 
@@ -466,11 +501,22 @@ The REST APIs can be tested using:
 
 For protected endpoints, include the JWT in the `Authorization` header.
 
+For file uploads, use `multipart/form-data` with the form field:
+
+```text
+file
+```
+
+For audio streaming, the backend supports HTTP Range requests such as:
+
+```http
+Range: bytes=0-1048575
+```
+
 ---
 
 ## 🔮 Future Improvements
 
-- Cloud storage for audio files
 - Advanced recommendation algorithms
 - Album management
 - Artist profiles
@@ -481,6 +527,7 @@ For protected endpoints, include the JWT in the `Authorization` header.
 - Production deployment
 - Detailed analytics
 - Better streaming/play-count tracking for repeated HTTP Range requests
+- Cloud/object storage for production-scale media
 
 ---
 
