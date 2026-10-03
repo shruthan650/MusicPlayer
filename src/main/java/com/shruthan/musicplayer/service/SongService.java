@@ -1,12 +1,17 @@
 package com.shruthan.musicplayer.service;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
+import org.jaudiotagger.audio.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.*;
+import org.springframework.data.mongodb.gridfs.GridFsResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,8 +22,6 @@ import com.shruthan.musicplayer.exception.ResourceNotFoundException;
 import com.shruthan.musicplayer.model.Song;
 import com.shruthan.musicplayer.model.User;
 import com.shruthan.musicplayer.repository.*;
-
-import org.jaudiotagger.audio.*;
 
 @Service
 public class SongService {
@@ -34,21 +37,18 @@ public class SongService {
 	private final UserRepository userRepository;
 	private final PlayHistoryRepository playHistoryRepository;
 	private final SecurityService securityService;
-	private final StorageService storageService;
+	private final GridFsStorageService gridFsStorageService;
 
-	public SongService(SongRepository songRepository,
-			PlaylistRepository playlistRepository,
-			UserRepository userRepository,
-			PlayHistoryRepository playHistoryRepository,
-			SecurityService securityService,
-			StorageService storageService) {
+	public SongService(SongRepository songRepository, PlaylistRepository playlistRepository,
+			UserRepository userRepository, PlayHistoryRepository playHistoryRepository, SecurityService securityService,
+			GridFsStorageService gridFsStorageService) {
 
 		this.songRepository = songRepository;
 		this.playlistRepository = playlistRepository;
 		this.userRepository = userRepository;
 		this.playHistoryRepository = playHistoryRepository;
 		this.securityService = securityService;
-		this.storageService = storageService;
+		this.gridFsStorageService = gridFsStorageService;
 	}
 
 	@Transactional(readOnly = true)
@@ -110,13 +110,22 @@ public class SongService {
 
 		Song song = getSongById(songId);
 
-		storageService.deleteFileIfExists(song.getFilePath());
-		storageService.deleteFileIfExists(song.getCoverImagePath());
+		// Delete audio from GridFS
+		if (song.getFileId() != null) {
+			gridFsStorageService.delete(song.getFileId());
+		}
+
+		// Delete cover from GridFS
+		if (song.getCoverFileId() != null) {
+			gridFsStorageService.delete(song.getCoverFileId());
+		}
 
 		songRepository.deleteById(songId);
+
 		playHistoryRepository.deleteBySongId(songId);
 
 		playlistRepository.pullSongFromAllPlaylists(songId);
+
 		userRepository.pullSongFromAllLikedLists(songId);
 
 		logger.info("Song deleted successfully: {}", songId);
@@ -128,12 +137,28 @@ public class SongService {
 		logger.info("Uploading audio file for song: {}", songId);
 
 		Song song = getSongById(songId);
-		String oldFilePath = song.getFilePath();
+
+		String oldFileId = song.getFileId();
+
+		Path tempFile = null;
 
 		try {
-			String newFilePath = storageService.storeSongFile(file, ALLOWED_AUDIO_EXTENSIONS);
 
-			File audioFileOnDisk = new File(newFilePath);
+			validateExtension(file, ALLOWED_AUDIO_EXTENSIONS);
+
+			/*
+			 * Jaudiotagger works with File. Therefore, temporarily write the uploaded file
+			 * to disk only for duration extraction.
+			 */
+			String originalFilename = file.getOriginalFilename();
+
+			String extension = getExtension(originalFilename);
+
+			tempFile = Files.createTempFile("musicplayer-", "." + extension);
+
+			file.transferTo(tempFile);
+
+			File audioFileOnDisk = tempFile.toFile();
 
 			AudioFile audioFile = AudioFileIO.read(audioFileOnDisk);
 
@@ -141,12 +166,26 @@ public class SongService {
 
 			long durationInMillis = audioHeader.getTrackLength() * 1000L;
 
+			/*
+			 * Upload the actual file to GridFS.
+			 */
+			String newFileId = gridFsStorageService.store(file);
+
+			/*
+			 * Update MongoDB metadata.
+			 */
 			song.setDuration(durationInMillis);
-			song.setFilePath(newFilePath);
+			song.setFileId(newFileId);
 
 			songRepository.save(song);
 
-			storageService.deleteFileIfExists(oldFilePath);
+			/*
+			 * Delete the old GridFS file only after the new file has been successfully
+			 * stored and the Song document has been updated.
+			 */
+			if (oldFileId != null) {
+				gridFsStorageService.delete(oldFileId);
+			}
 
 			logger.info("Audio file uploaded successfully for song: {}", songId);
 
@@ -155,6 +194,20 @@ public class SongService {
 			logger.error("Failed to process audio file for song: {}", songId, e);
 
 			throw new InvalidInputException("Failed to process audio file: " + e.getMessage());
+
+		} finally {
+
+			/*
+			 * Remove only the temporary file used by Jaudiotagger. The actual audio remains
+			 * safely inside GridFS.
+			 */
+			if (tempFile != null) {
+				try {
+					Files.deleteIfExists(tempFile);
+				} catch (IOException e) {
+					logger.warn("Failed to delete temporary audio file: {}", tempFile, e);
+				}
+			}
 		}
 	}
 
@@ -164,16 +217,22 @@ public class SongService {
 		logger.info("Uploading cover image for song: {}", songId);
 
 		Song song = getSongById(songId);
-		String oldCoverPath = song.getCoverImagePath();
+
+		String oldCoverFileId = song.getCoverFileId();
 
 		try {
-			String newCoverPath = storageService.storeCoverFile(file, ALLOWED_IMAGE_EXTENSIONS);
+			validateExtension(file, ALLOWED_IMAGE_EXTENSIONS);
 
-			song.setCoverImagePath(newCoverPath);
+			String newCoverFileId = gridFsStorageService.store(file);
+
+			song.setCoverFileId(newCoverFileId);
 
 			Song savedSong = songRepository.save(song);
 
-			storageService.deleteFileIfExists(oldCoverPath);
+			// Delete old cover only after successful update
+			if (oldCoverFileId != null) {
+				gridFsStorageService.delete(oldCoverFileId);
+			}
 
 			logger.info("Cover image uploaded successfully for song: {}", songId);
 
@@ -183,7 +242,7 @@ public class SongService {
 
 			logger.error("Failed to store cover image for song: {}", songId, e);
 
-			throw new InvalidInputException("Failed to store image cover: " + e.getMessage());
+			throw new InvalidInputException("Failed to store cover image: " + e.getMessage());
 		}
 	}
 
@@ -194,17 +253,27 @@ public class SongService {
 
 		Song song = getSongById(songId);
 
-		return storageService.loadAsResource(song.getFilePath());
+		if (song.getFileId() == null) {
+			throw new ResourceNotFoundException("Audio file not found for song");
+		}
+
+		GridFsResource resource = gridFsStorageService.getResource(song.getFileId());
+
+		return resource;
 	}
 
 	@Transactional(readOnly = true)
 	public Resource getCoverImageResource(String songId) {
 
-		logger.debug("Loading cover image for song: {}", songId);
+		logger.debug("Loading cover image resource for song: {}", songId);
 
 		Song song = getSongById(songId);
 
-		return storageService.loadAsResource(song.getCoverImagePath());
+		if (song.getCoverFileId() == null) {
+			throw new ResourceNotFoundException("Cover image not found for song");
+		}
+
+		return gridFsStorageService.getResource(song.getCoverFileId());
 	}
 
 	@Transactional
@@ -290,12 +359,7 @@ public class SongService {
 
 		List<Song> likedSongs = songRepository.findAllById(likedSongIds);
 
-		List<String> genres = likedSongs
-				.stream()
-				.map(Song::getGenre)
-				.filter(Objects::nonNull)
-				.distinct()
-				.toList();
+		List<String> genres = likedSongs.stream().map(Song::getGenre).filter(Objects::nonNull).distinct().toList();
 
 		if (genres.isEmpty()) {
 
@@ -304,15 +368,42 @@ public class SongService {
 			return List.of();
 		}
 
-		List<Song> recommendations = songRepository
-				.findByGenreInOrderByPlayCountDesc(genres)
-				.stream()
-				.filter(song -> !likedSongIds.contains(song.getId()))
-				.limit(10)
-				.toList();
+		List<Song> recommendations = songRepository.findByGenreInOrderByPlayCountDesc(genres).stream()
+				.filter(song -> !likedSongIds.contains(song.getId())).limit(10).toList();
 
 		logger.debug("Generated {} recommendations for user: {}", recommendations.size(), user.getId());
 
 		return recommendations;
+	}
+
+	private void validateExtension(MultipartFile file, Set<String> allowedExtensions) {
+
+		if (file == null || file.isEmpty()) {
+			throw new InvalidInputException("File can't be empty");
+		}
+
+		String filename = file.getOriginalFilename();
+
+		if (filename == null || filename.isBlank()) {
+			throw new InvalidInputException("Invalid file name");
+		}
+
+		String extension = getExtension(filename);
+
+		if (!allowedExtensions.contains(extension)) {
+			throw new InvalidInputException("Unsupported file type: ." + extension);
+		}
+	}
+
+	private String getExtension(String filename) {
+
+		int lastDot = filename.lastIndexOf('.');
+
+		if (lastDot == -1 || lastDot == filename.length() - 1) {
+
+			throw new InvalidInputException("File has no valid extension");
+		}
+
+		return filename.substring(lastDot + 1).toLowerCase();
 	}
 }

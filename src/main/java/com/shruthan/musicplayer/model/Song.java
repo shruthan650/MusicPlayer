@@ -31,10 +31,9 @@ public class Song {
 	
 	private Long duration;
 
-	@NotBlank
-	private String filePath;
+	private String fileId;
 	
-	private String coverImagePath;
+	private String coverFileId;
 	
 	private long playCount = 0;
 }
