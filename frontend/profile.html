@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Melodia - Profile</title>
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        min-height: 100vh;
+        background: #08080d;
+        color: white;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* NAVBAR */
+    .navbar {
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 5%;
+        background: rgba(8, 8, 13, 0.88);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        position: sticky;
+        top: 0;
+        backdrop-filter: blur(12px);
+    }
+
+    .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 700;
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    }
+
+    .nav-logo span { color: #8b5cf6; font-size: 28px; }
+
+    .nav-actions { display: flex; gap: 10px; }
+
+    .nav-btn {
+        border: none;
+        background: transparent;
+        color: #ddd;
+        padding: 9px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .nav-btn:hover { background: rgba(139,92,246,0.15); color: white; }
+
+    /* MAIN */
+    .profile-main {
+        width: 90%;
+        max-width: 640px;
+        margin: auto;
+        padding: 35px 0 50px;
+    }
+
+    .heading { margin-bottom: 28px; }
+
+    .heading h2 {
+        margin-bottom: 5px;
+        font-family: Georgia, 'Times New Roman', Times, serif;
+    }
+
+    .heading p { color: #999; font-family: cursive; }
+
+    .panel {
+        margin-bottom: 25px;
+        padding: 25px;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .panel h3 { margin-bottom: 18px; }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .info-row:last-child { border-bottom: none; }
+    .info-row span:first-child { color: #77717f; font-size: 13px; }
+
+    .badge {
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: rgba(139,92,246,0.15);
+        color: #c4b5fd;
+        font-size: 11px;
+        letter-spacing: 1px;
+    }
+
+    .input-group { margin-bottom: 16px; }
+
+    .input-group label {
+        display: block;
+        margin-bottom: 7px;
+        color: #aaa5b3;
+        font-size: 13px;
+    }
+
+    .input-group input {
+        width: 100%;
+        padding: 13px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(255,255,255,0.05);
+        color: white;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .input-group input:focus { border-color: #8b5cf6; }
+
+    .save-button {
+        width: 100%;
+        padding: 13px;
+        border: none;
+        border-radius: 11px;
+        background: #8b5cf6;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .save-button:hover { opacity: 0.9; }
+    .save-button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .form-message {
+        min-height: 20px;
+        margin-top: 12px;
+        text-align: center;
+        font-size: 14px;
+    }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+
+    <div class="nav-logo"><span>♪</span> Melodia</div>
+
+    <div class="nav-actions">
+        <button class="nav-btn" id="backButton">← Back</button>
+        <button class="nav-btn" id="logoutButton">Logout</button>
+    </div>
+
+</nav>
+
+<main class="profile-main">
+
+    <div class="heading">
+        <h2>Your Profile</h2>
+        <p>Manage your account details.</p>
+    </div>
+
+    <!-- ACCOUNT -->
+    <section class="panel">
+        <h3>Account</h3>
+
+        <div class="info-row">
+            <span>Email</span>
+            <span id="infoEmail">--</span>
+        </div>
+
+        <div class="info-row">
+            <span>Account type</span>
+            <span class="badge" id="infoRole">--</span>
+        </div>
+    </section>
+
+    <!-- CHANGE EMAIL -->
+    <section class="panel">
+        <h3>Change Email</h3>
+
+        <form id="emailForm">
+            <div class="input-group">
+                <label for="newEmail">New email</label>
+                <input type="email" id="newEmail" placeholder="Enter new email" required>
+            </div>
+
+            <button type="submit" class="save-button" id="emailButton">Update Email</button>
+            <p class="form-message" id="emailMessage"></p>
+        </form>
+    </section>
+
+    <!-- CHANGE PASSWORD -->
+    <section class="panel">
+        <h3>Change Password</h3>
+
+        <form id="passwordForm">
+            <div class="input-group">
+                <label for="oldPassword">Current password</label>
+                <input type="password" id="oldPassword" placeholder="Current password" required>
+            </div>
+
+            <div class="input-group">
+                <label for="newPassword">New password</label>
+                <input type="password" id="newPassword" placeholder="New password" required>
+            </div>
+
+            <div class="input-group">
+                <label for="confirmPassword">Confirm new password</label>
+                <input type="password" id="confirmPassword" placeholder="Repeat new password" required>
+            </div>
+
+            <button type="submit" class="save-button" id="passwordButton">Update Password</button>
+            <p class="form-message" id="passwordMessage"></p>
+        </form>
+    </section>
+
+</main>
+
+<script>
+(function () {
+
+    const API = "http://localhost:8080";
+
+    // ---------- must be logged in ----------
+
+    const token = localStorage.getItem("melodiaToken");
+
+    if (!token) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    let user = null;
+
+    try {
+        user = JSON.parse(localStorage.getItem("melodiaUser"));
+    } catch (e) {}
+
+    if (!user) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    // ---------- helpers ----------
+
+    function currentToken() {
+        return localStorage.getItem("melodiaToken");
+    }
+
+    function show(id, text, ok) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.style.color = ok ? "#4ade80" : "#f87171";
+    }
+
+    async function errorText(response) {
+        const text = await response.text().catch(() => "");
+        try {
+            const data = JSON.parse(text);
+            return data.message || data.error || "Request failed.";
+        } catch (e) {
+            return text || "Request failed.";
+        }
+    }
+
+    function showAccount() {
+        document.getElementById("infoEmail").textContent = user.userEmail || "--";
+        document.getElementById("infoRole").textContent =
+            user.role === "USER" ? "LISTENER" : user.role;
+    }
+
+    function logout() {
+        localStorage.removeItem("melodiaToken");
+        localStorage.removeItem("melodiaUser");
+        window.location.href = "index.html";
+    }
+
+    showAccount();
+
+    // ---------- navbar ----------
+
+    document.getElementById("backButton").onclick = function () {
+        window.location.href = user.role === "ARTIST" ? "artist.html" : "listener.html";
+    };
+
+    document.getElementById("logoutButton").onclick = logout;
+
+    // ---------- change email ----------
+
+    document.getElementById("emailForm").addEventListener("submit", async function (event) {
+
+        event.preventDefault();
+
+        const input = document.getElementById("newEmail");
+        const button = document.getElementById("emailButton");
+        const email = input.value.trim();
+
+        button.disabled = true;
+        show("emailMessage", "", true);
+
+        try {
+
+            const response = await fetch(
+                API + "/api/user/email?email=" + encodeURIComponent(email),
+                { method: "PUT", headers: { "Authorization": "Bearer " + currentToken() } }
+            );
+
+            if (!response.ok) throw new Error(await errorText(response));
+
+            // the login token is tied to the email, so the backend sends a new one
+            const result = await response.json();
+
+            if (result && result.token) {
+                localStorage.setItem("melodiaToken", result.token);
+            }
+
+            const me = await fetch(API + "/api/user/me", {
+                headers: { "Authorization": "Bearer " + currentToken() }
+            });
+
+            if (me.ok) {
+                user = await me.json();
+                localStorage.setItem("melodiaUser", JSON.stringify(user));
+                showAccount();
+            }
+
+            input.value = "";
+            show("emailMessage", "Email updated.", true);
+
+        } catch (error) {
+            show("emailMessage", error.message || "Could not update email.", false);
+        } finally {
+            button.disabled = false;
+        }
+
+    });
+
+    // ---------- change password ----------
+
+    document.getElementById("passwordForm").addEventListener("submit", async function (event) {
+
+        event.preventDefault();
+
+        const form = event.target;
+        const button = document.getElementById("passwordButton");
+
+        const oldPassword = document.getElementById("oldPassword").value;
+        const newPassword = document.getElementById("newPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+
+        if (newPassword !== confirmPassword) {
+            show("passwordMessage", "New passwords do not match.", false);
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            show("passwordMessage", "Password must contain at least 6 characters.", false);
+            return;
+        }
+
+        button.disabled = true;
+        show("passwordMessage", "", true);
+
+        try {
+
+            const response = await fetch(API + "/api/user/password", {
+                method: "PUT",
+                headers: {
+                    "Authorization": "Bearer " + currentToken(),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ oldPassword: oldPassword, newPassword: newPassword })
+            });
+
+            if (!response.ok) throw new Error(await errorText(response));
+
+            form.reset();
+            show("passwordMessage", "Password updated.", true);
+
+        } catch (error) {
+            show("passwordMessage", error.message || "Could not update password.", false);
+        } finally {
+            button.disabled = false;
+        }
+
+    });
+
+})();
+</script>
+
+</body>
+</html>

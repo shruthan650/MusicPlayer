@@ -1,0 +1,219 @@
+/* ------------------------- GENERAL ------------------------- */ * { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    font-family: Arial, Helvetica, sans-serif;
+    min-height: 100vh; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background: radial-gradient(circle at top left, #3b1d63, transparent 40%), 
+                radial-gradient(circle at bottom right, #17103d, transparent 40%), #08080d; 
+    color: white; 
+}
+/* ------------------------- LOGIN CONTAINER ------------------------- */
+.login-container { 
+    width: 100%; 
+    padding: 20px; 
+    display: flex; 
+    justify-content: center; 
+}
+/* ------------------------- LOGIN CARD ------------------------- */ 
+.login-card { 
+    width: 100%; 
+    max-width: 430px; 
+    padding: 40px; 
+    background: rgba(20, 18, 29, 0.95); 
+    border: 1px solid rgba(255, 255, 255, 0.08); 
+    border-radius: 20px; 
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); 
+    text-align: center; 
+}
+/* ------------------------- LOGO ------------------------- */ 
+.logo { 
+    width: 55px; 
+    height: 55px; 
+    margin: 0 auto 15px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    border-radius: 50%; 
+    background: #8b5cf6; 
+    font-size: 28px; 
+    font-weight: bold; 
+}
+h1 { 
+    font-size: 30px; 
+    font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    margin-bottom: 5px; 
+}
+.tagline { 
+    color: #9c96a8; 
+    font-size: 14px; 
+    margin-bottom: 35px;
+    font-family: cursive; 
+}
+/* ------------------------- LOGIN HEADING ------------------------- */ 
+h2 {
+    font-size: 23px; 
+    margin-bottom: 7px; 
+}
+.login-text { 
+    color: #bea0fc; 
+    font-size: 14px; 
+    margin-bottom: 25px; 
+}
+/* ------------------------- ROLE SELECTION ------------------------- */ 
+.role-container { 
+    display: flex; 
+    gap: 10px; 
+    margin-bottom: 25px; 
+} 
+.role-btn { 
+    flex: 1; 
+    padding: 12px; 
+    border-radius: 10px; 
+    border: 1px solid #3f3b43; 
+    background: #1b1823; 
+    color: #87848c; 
+    font-size: 14px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
+.role-btn:hover { 
+    border-color: #8b5cf6; 
+}
+.role-btn.active { 
+    background: #8b5cf6; 
+    color: white; 
+    border-color: #8b5cf6; 
+}
+/* ------------------------- INPUTS ------------------------- */ 
+.input-group { 
+    text-align: left; 
+    margin-bottom: 18px; 
+}
+.input-group label { 
+    display: block; 
+    margin-bottom: 8px; 
+    font-size: 14px; 
+    color: #d2ced9; 
+}
+.input-group input { 
+    width: 100%; 
+    padding: 13px 14px; 
+    border-radius: 9px; 
+    border: 1px solid #393342; 
+    background: #17151e; 
+    color: white; 
+    outline: none; 
+    font-size: 14px; 
+    transition: 0.2s; 
+}
+.input-group input:focus { 
+    border-color: #8b5cf6; 
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+.input-group input::placeholder { 
+    color: #6f6978; 
+}
+/* ------------------------- FORM OPTIONS ------------------------- */ 
+.form-options { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin: 5px 0 25px; 
+    font-size: 12px; 
+} 
+.remember { 
+    display: flex; 
+    align-items: center; 
+    gap: 6px; 
+    color: #9c96a8; 
+} 
+.remember input { 
+    accent-color: #8b5cf6; 
+} 
+.form-options a { 
+    color: #a78bfa; 
+    text-decoration: none; 
+} 
+.form-options a:hover { 
+    text-decoration: underline; 
+}
+/* ------------------------- LOGIN BUTTON ------------------------- */ 
+.login-btn {
+    width: 100%; 
+    padding: 14px; 
+    border: none; 
+    border-radius: 10px; 
+    background: #8b5cf6; 
+    color: white; 
+    font-size: 15px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: 0.2s; 
+} 
+.login-btn:hover { 
+    background: #7c3aed; 
+    transform: translateY(-1px); 
+}
+/* ------------------------- MESSAGE ------------------------- */ 
+#message { 
+    margin-top: 15px; 
+    font-size: 13px; 
+    color: #a78bfa; 
+}
+/* ------------------------- SIGN UP ------------------------- */ 
+.signup-text { 
+    margin-top: 25px; 
+    color: #8f8999; 
+    font-size: 13px; 
+} 
+.signup-text a { 
+    color: #a78bfa; 
+    text-decoration: none; 
+    font-weight: bold; 
+} 
+.signup-text a:hover { 
+    text-decoration: underline; 
+} 
+/* ------------------------- MOBILE ------------------------- */ 
+@media (max-width: 500px) {
+    .login-card { 
+        padding: 30px 22px; 
+    } 
+    h1 {
+        font-size: 27px; 
+    }
+}
+
+.input-group select {
+    width: 100%;
+
+    padding: 13px 14px;
+
+    border-radius: 9px;
+
+    border: 1px solid #393342;
+
+    background: #17151e;
+
+    color: white;
+
+    outline: none;
+
+    font-size: 14px;
+
+    cursor: pointer;
+}
+
+.input-group select:focus {
+    border-color: #8b5cf6;
+
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+.input-group select option {
+    background: #17151e;
+
+    color: white;
+}
