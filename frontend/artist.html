@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+<title>Melodia - Artist</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+    /* ==============================
+       GENERAL
+    ============================== */
+
+    body {
+        display: block;
+        min-height: 100vh;
+    }
+
+    .artist-dashboard {
+        min-height: 100vh;
+        padding-bottom: 50px;
+    }
+
+
+    /* ==============================
+       NAVBAR
+    ============================== */
+
+    .navbar {
+        height: 70px;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        padding: 0 5%;
+
+        background: rgba(8, 8, 13, 0.88);
+
+        border-bottom:
+            1px solid rgba(255,255,255,0.08);
+
+        position: sticky;
+        top: 0;
+        z-index: 100;
+
+        backdrop-filter: blur(12px);
+    }
+
+    .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        font-size: 22px;
+        font-weight: 700;
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    }
+
+    .nav-logo span {
+        color: #8b5cf6;
+        font-size: 28px;
+    }
+
+    .nav-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .nav-btn {
+        border: none;
+
+        background: transparent;
+
+        color: #ddd;
+
+        padding: 9px 14px;
+
+        border-radius: 10px;
+
+        cursor: pointer;
+    }
+
+    .nav-btn:hover {
+        background: rgba(139,92,246,0.15);
+        color: white;
+    }
+
+
+    /* ==============================
+       MAIN
+    ============================== */
+
+    .artist-main {
+        width: 90%;
+        max-width: 1200px;
+
+        margin: auto;
+
+        padding-top: 35px;
+    }
+
+    .artist-heading {
+        margin-bottom: 30px;
+    }
+
+    .artist-heading h2 {
+        margin-bottom: 5px;
+        font-family: Georgia, 'Times New Roman', Times, serif;
+    }
+
+    .artist-heading p {
+        color: #999;
+        font-family: cursive;
+    }
+
+
+    /* ==============================
+       STATISTICS
+    ============================== */
+
+    .stats-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(4, 1fr);
+
+        gap: 15px;
+
+        margin-bottom: 35px;
+    }
+
+    .stat-card {
+        padding: 22px;
+
+        border-radius: 16px;
+
+        background:
+            rgba(255,255,255,0.04);
+
+        border:
+            1px solid rgba(255,255,255,0.07);
+    }
+
+    .stat-label {
+        color: #888;
+
+        font-size: 13px;
+
+        margin-bottom: 10px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+
+        font-weight: 700;
+
+        color: white;
+    }
+
+    .stat-card.highlight {
+        border-color:
+            rgba(139,92,246,0.35);
+    }
+
+    .stat-card.highlight .stat-value {
+        color: #c084fc;
+    }
+
+
+    /* ==============================
+       UPLOAD SECTION
+    ============================== */
+
+    .upload-section {
+        margin-bottom: 35px;
+
+        padding: 25px;
+
+        border-radius: 18px;
+
+        background:
+            rgba(255,255,255,0.04);
+
+        border:
+            1px solid rgba(255,255,255,0.07);
+    }
+
+    .section-title {
+        margin-bottom: 20px;
+    }
+
+    .section-title h3 {
+        margin-bottom: 5px;
+    }
+
+    .section-title p {
+        color: #888;
+
+        font-size: 13px;
+    }
+
+
+    .upload-form {
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, 1fr);
+
+        gap: 18px;
+    }
+
+    .upload-form .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .upload-form .input-group {
+        margin-bottom: 0;
+    }
+
+    .upload-form input,
+    .upload-form select {
+        width: 100%;
+
+        padding: 13px 14px;
+
+        border-radius: 10px;
+
+        border:
+            1px solid rgba(255,255,255,0.10);
+
+        background:
+            rgba(255,255,255,0.05);
+
+        color: white;
+
+        outline: none;
+    }
+
+    .upload-form input:focus,
+    .upload-form select:focus {
+        border-color: #8b5cf6;
+    }
+
+    .upload-form select option {
+        background: #15131d;
+        color: white;
+    }
+
+    .file-input {
+        padding: 10px !important;
+    }
+
+
+    .upload-button {
+        grid-column: 1 / -1;
+
+        padding: 13px;
+
+        border: none;
+
+        border-radius: 11px;
+
+        background: #8b5cf6;
+
+        color: white;
+
+        font-weight: 600;
+
+        cursor: pointer;
+    }
+
+    .upload-button:hover {
+        opacity: 0.9;
+    }
+
+    .upload-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+
+    #uploadMessage {
+        grid-column: 1 / -1;
+
+        text-align: center;
+
+        margin-top: 5px;
+
+        font-size: 14px;
+    }
+
+
+    /* ==============================
+       MY SONGS
+    ============================== */
+
+    .songs-section {
+        margin-bottom: 35px;
+    }
+
+    .songs-header {
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        margin-bottom: 15px;
+    }
+
+    .songs-header h3 {
+        margin: 0;
+    }
+
+    .refresh-button {
+        border: none;
+
+        background:
+            rgba(255,255,255,0.06);
+
+        color: #ddd;
+
+        padding: 9px 14px;
+
+        border-radius: 9px;
+
+        cursor: pointer;
+    }
+
+    .refresh-button:hover {
+        background:
+            rgba(139,92,246,0.15);
+    }
+
+
+    .artist-song-list {
+        display: flex;
+
+        flex-direction: column;
+
+        gap: 10px;
+    }
+
+
+    .artist-song-card {
+        display: flex;
+
+        align-items: center;
+
+        gap: 15px;
+
+        padding: 15px;
+
+        border-radius: 14px;
+
+        background:
+            rgba(255,255,255,0.04);
+
+        border:
+            1px solid rgba(255,255,255,0.06);
+    }
+
+    .artist-song-cover {
+        width: 55px;
+        height: 55px;
+
+        flex-shrink: 0;
+
+        border-radius: 10px;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        font-size: 22px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #8b5cf6,
+                #312e81
+            );
+    }
+
+    .artist-song-info {
+        flex: 1;
+
+        min-width: 0;
+    }
+
+    .artist-song-title {
+        font-weight: 600;
+
+        white-space: nowrap;
+
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+    }
+
+    .artist-song-details {
+        color: #888;
+
+        font-size: 13px;
+
+        margin-top: 5px;
+    }
+
+    .delete-song-button {
+        border: none;
+
+        background:
+            rgba(239,68,68,0.12);
+
+        color: #f87171;
+
+        padding: 9px 12px;
+
+        border-radius: 9px;
+
+        cursor: pointer;
+    }
+
+    .delete-song-button:hover {
+        background:
+            rgba(239,68,68,0.22);
+    }
+
+
+    /* ==============================
+       EMPTY
+    ============================== */
+
+    .empty-message {
+        padding: 30px;
+
+        text-align: center;
+
+        color: #777;
+
+        border:
+            1px dashed rgba(255,255,255,0.1);
+
+        border-radius: 14px;
+    }
+
+
+    /* ==============================
+       RESPONSIVE
+    ============================== */
+
+    @media (max-width: 850px) {
+
+        .stats-grid {
+            grid-template-columns:
+                repeat(2, 1fr);
+        }
+
+    }
+
+
+    @media (max-width: 650px) {
+
+        .navbar {
+            padding: 0 4%;
+        }
+
+        .artist-main {
+            width: 92%;
+        }
+
+        .upload-form {
+            grid-template-columns: 1fr;
+        }
+
+        .upload-form .full-width {
+            grid-column: auto;
+        }
+
+        .upload-button {
+            grid-column: auto;
+        }
+
+        #uploadMessage {
+            grid-column: auto;
+        }
+
+        .artist-song-card {
+            gap: 10px;
+        }
+
+        .delete-song-button {
+            font-size: 12px;
+            padding: 8px;
+        }
+
+    }
+
+</style>
+
+</head>
+
+<body>
+
+<div class="artist-dashboard">
+
+<!-- ==============================
+     NAVBAR
+============================== -->
+
+<nav class="navbar">
+
+    <div class="nav-logo">
+
+        <span>♪</span>
+
+        Melodia
+
+    </div>
+
+
+    <div class="nav-actions">
+
+        <button
+            class="nav-btn"
+            id="profileButton">
+
+            Profile
+
+        </button>
+
+
+        <button
+            class="nav-btn"
+            id="logoutButton">
+
+            Logout
+
+        </button>
+
+    </div>
+
+</nav>
+
+
+<!-- ==============================
+     MAIN
+============================== -->
+
+<main class="artist-main">
+
+
+    <div class="artist-heading">
+
+        <h2>Artist Dashboard</h2>
+
+        <p>
+            Upload your music and keep track of your listeners.
+        </p>
+
+    </div>
+
+
+    <!-- ==============================
+         STATISTICS
+    ============================== -->
+
+    <section class="stats-grid">
+
+
+        <div class="stat-card highlight">
+
+            <div class="stat-label">
+                Total Songs
+            </div>
+
+            <div
+                class="stat-value"
+                id="totalSongs">
+
+                0
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Total Plays
+            </div>
+
+            <div
+                class="stat-value"
+                id="totalPlays">
+
+                0
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Most Played Song
+            </div>
+
+            <div
+                class="stat-value"
+                id="mostPlayedSong">
+
+                --
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-label">
+                Most Played Count
+            </div>
+
+            <div
+                class="stat-value"
+                id="mostPlayedCount">
+
+                0
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+    <!-- ==============================
+         UPLOAD SONG
+    ============================== -->
+
+    <section class="upload-section">
+
+
+        <div class="section-title">
+
+            <h3>Upload New Song</h3>
+
+            <p>
+                Add your song information and upload the audio file.
+            </p>
+
+        </div>
+
+
+        <form
+            class="upload-form"
+            id="uploadForm">
+
+
+            <div class="input-group">
+
+                <label for="songTitle">
+                    Song Title
+                </label>
+
+                <input
+                    type="text"
+                    id="songTitle"
+                    placeholder="Enter song title"
+                    required>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="artistName">
+                    Artist Name
+                </label>
+
+                <input
+                    type="text"
+                    id="artistName"
+                    placeholder="Enter artist name"
+                    required>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="albumName">
+                    Album Name
+                </label>
+
+                <input
+                    type="text"
+                    id="albumName"
+                    placeholder="Enter album name">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="genre">
+                    Genre
+                </label>
+
+                <select id="genre">
+
+                    <option value="">
+                        Select Genre
+                    </option>
+
+                    <option value="Pop">
+                        Pop
+                    </option>
+
+                    <option value="Rock">
+                        Rock
+                    </option>
+
+                    <option value="Classical">
+                        Classical
+                    </option>
+
+                    <option value="Devotional">
+                        Devotional
+                    </option>
+
+                    <option value="Hip Hop">
+                        Hip Hop
+                    </option>
+
+                    <option value="Electronic">
+                        Electronic
+                    </option>
+
+                    <option value="Other">
+                        Other
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            
+
+
+            <div class="input-group">
+
+                <label for="audioFile">
+                    Audio File
+                </label>
+
+                <input
+                    type="file"
+                    id="audioFile"
+                    class="file-input"
+                    accept="audio/*"
+                    required>
+
+            </div>
+
+
+            <div class="input-group full-width">
+
+                <label for="coverFile">
+                    Cover Image (Optional)
+                </label>
+
+                <input
+                    type="file"
+                    id="coverFile"
+                    class="file-input"
+                    accept="image/*">
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="upload-button"
+                id="uploadButton">
+
+                Upload Song
+
+            </button>
+
+
+            <p id="uploadMessage"></p>
+
+
+        </form>
+
+    </section>
+
+
+    <!-- ==============================
+         MY SONGS
+    ============================== -->
+
+    <section class="songs-section">
+
+
+        <div class="songs-header">
+
+            <h3>My Songs</h3>
+
+            <button
+                class="refresh-button"
+                id="refreshButton">
+
+                Refresh
+
+            </button>
+
+        </div>
+
+
+        <div
+            class="artist-song-list"
+            id="artistSongList">
+
+            <div class="empty-message">
+                Loading your songs...
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+</div>
+
+<script src="artist.js"></script>
+
+</body>
+
+</html>
