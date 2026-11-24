@@ -340,6 +340,25 @@ GridFS collections are created and managed by MongoDB through Spring Data MongoD
 
 ## ▶️ Running the Project
 
+### Docker deployment
+
+1. Copy the deployment environment template:
+
+```bash
+cp .env.example .env
+```
+
+2. Set `JWT_SECRET` in `.env` to a Base64-encoded key of at least 32 bytes.
+
+3. Start MongoDB, the API, and the frontend:
+
+```bash
+docker compose up --build -d
+```
+
+The application is available at `http://localhost`. The frontend proxies `/api/*`
+requests to the backend, so no separate public API URL is required.
+
 ### 1. Clone the repository
 
 ```bash

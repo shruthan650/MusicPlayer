@@ -1,4 +1,9 @@
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = (
+    window.MUSICPLAYER_API_BASE_URL ||
+    (["localhost", "127.0.0.1"].includes(window.location.hostname)
+        ? `${window.location.protocol}//${window.location.hostname}:8080`
+        : "")
+).replace(/\/$/, "");
 
 // =====================================================
 // AUTHENTICATION

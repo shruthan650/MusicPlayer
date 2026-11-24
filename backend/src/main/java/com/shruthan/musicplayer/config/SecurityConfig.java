@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -31,12 +32,18 @@ public class SecurityConfig {
 	private final UserService userService;
 	private final JWTFilter jwtFilter;
 	private final PasswordEncoder passwordEncoder;
+	private final List<String> allowedOrigins;
 
-	public SecurityConfig(UserService userService, JWTFilter jwtFilter, PasswordEncoder passwordEncoder) {
+	public SecurityConfig(UserService userService, JWTFilter jwtFilter, PasswordEncoder passwordEncoder,
+			@Value("${app.cors.allowed-origins}") String allowedOrigins) {
 
 		this.jwtFilter = jwtFilter;
 		this.passwordEncoder = passwordEncoder;
 		this.userService = userService;
+		this.allowedOrigins = java.util.Arrays.stream(allowedOrigins.split(","))
+				.map(String::trim)
+				.filter(origin -> !origin.isEmpty())
+				.toList();
 	}
 
 	@Bean
@@ -55,11 +62,12 @@ public class SecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 
-		configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+		configuration.setAllowedOrigins(allowedOrigins);
 
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
-		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Range"));
+		configuration.setExposedHeaders(List.of("Accept-Ranges", "Content-Length", "Content-Range"));
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 

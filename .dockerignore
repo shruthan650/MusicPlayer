@@ -1,0 +1,9 @@
+.git
+.gitignore
+.vscode
+.settings
+**/target
+**/bin
+**/node_modules
+**/*.log
+backend/log

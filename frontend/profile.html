@@ -224,10 +224,16 @@
 
 </main>
 
+<script src="config.js"></script>
 <script>
 (function () {
 
-    const API = "http://localhost:8080";
+    const API = (
+        window.MUSICPLAYER_API_BASE_URL ||
+        (["localhost", "127.0.0.1"].includes(window.location.hostname)
+            ? `${window.location.protocol}//${window.location.hostname}:8080`
+            : "")
+    ).replace(/\/$/, "");
 
     // ---------- must be logged in ----------
 
